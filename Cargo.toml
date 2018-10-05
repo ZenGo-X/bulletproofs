@@ -10,4 +10,4 @@ crate-type = ["dylib"]
 
 [dependencies]
 cryptography-utils = { git = "https://github.com/KZen-networks/cryptography-utils" , features =  ["curve25519"]}
-
+itertools = "0.7.8"
