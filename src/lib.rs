@@ -18,3 +18,9 @@ version 3 of the License, or (at your option) any later version.
 extern crate cryptography_utils;
 #[macro_use] extern crate itertools;
 pub mod proofs;
+
+#[derive(Copy, PartialEq, Eq, Clone, Debug)]
+pub enum Errors {
+    InnerProductError,
+
+}

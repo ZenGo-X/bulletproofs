@@ -19,6 +19,7 @@ use cryptography_utils::arithmetic::traits::{Converter,Modulo};
 use cryptography_utils::{GE,FE};
 use cryptography_utils::elliptic::curves::traits::*;
 use cryptography_utils::cryptographic_primitives::hashing::traits::*;
+use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use cryptography_utils::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use std::ops::Shr;
 use itertools::Itertools;
@@ -45,14 +46,14 @@ impl RangeProof{
 
         let g_vec = (0..bit_length).map(|i| {
             let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-            let hash_i = HSha256::create_hash(&[&kzen_label_i]);
+            let hash_i = HSha512::create_hash(&[&kzen_label_i]);
             generate_random_point(&Converter::to_vec(&hash_i))
         }).collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..bit_length).map(|i| {
             let kzen_label_j = BigInt::from(bit_length as u32) +  BigInt::from(i as u32) + &kzen_label;
-            let hash_j = HSha256::create_hash(&[&kzen_label_j]);
+            let hash_j = HSha512::create_hash(&[&kzen_label_j]);
             generate_random_point(&Converter::to_vec(&hash_j))
         }).collect::<Vec<GE>>();
 
@@ -178,7 +179,7 @@ impl RangeProof{
         let P = Gx.clone() * &tx_fe;
 
         let yi_inv = (0..bit_length).map(|i| {
-            BigInt::mod_pow(&yi[i], &BigInt::from(-1), &order)
+            yi[i].invert(&order).unwrap()
         }).collect::<Vec<BigInt>>();
 
         let hi_tag = (0..bit_length).map(|i| {
@@ -220,9 +221,14 @@ pub fn generate_random_point( bytes: &[u8]) -> GE{
 
     let result: Result<GE,_> = ECPoint::from_bytes(&bytes);
     if result.is_ok(){ return result.unwrap()}
-    let bn = BigInt::from(bytes);
-    let bytes = BigInt::to_vec(&(bn+1));
-    return generate_random_point(&bytes);
+    else {
+        let two = BigInt::from(2);
+        let temp : FE = ECScalar::new_random();
+        let bn = BigInt::from(bytes);
+        let bn_times_two = BigInt::mod_mul(&bn,&two, &temp.q());
+        let bytes = BigInt::to_vec(&bn_times_two);
+        return generate_random_point(&bytes);
+    }
 
 
 
