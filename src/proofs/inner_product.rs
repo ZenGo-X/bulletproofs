@@ -92,19 +92,18 @@ impl InnerProductArg{
             let x = HSha256::create_hash_from_ge(&[&L,&R, &ux]);
             let x_bn = x.to_big_int();
             let order = x.q();
-            let x_inv = x_bn.invert(&order).unwrap();
-            let x_inv_fe = ECScalar::from(&x_inv);
+            let x_inv_fe = x.invert();
 
             let mut a_new = (0..n).map(|i| {
                 let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
-                let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv, &order);
+                let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_big_int(), &order);
                 BigInt::mod_add(&aLx, &aR_minusx, &order)
             }).collect::<Vec<BigInt>>();
          //   a = &mut a_new[..];
 
             let mut b_new = (0..n).map(|i| {
                 let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
-                let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv, &order);
+                let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_big_int(), &order);
                 BigInt::mod_add(&bRx, &bL_minusx, &order)
             }).collect::<Vec<BigInt>>();
         //    b = &mut b_new[..];
@@ -155,10 +154,9 @@ impl InnerProductArg{
             let x = HSha256::create_hash_from_ge(&[&self.L[0],&self.R[0], &ux]);
             let x_bn = x.to_big_int();
             let order = x.q();
-            let x_inv = x_bn.invert(&order).unwrap();
-            let x_inv_fe = ECScalar::from(&x_inv);
+            let x_inv_fe = x.invert();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn = BigInt::mod_mul(&x_inv, &x_inv, &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
             let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
             let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
 
@@ -277,11 +275,12 @@ mod tests {
 
 
                 let yi_inv = (0..n).map(|i| {
-                    yi[i].invert(&order).expect(&"error invert")
-                }).collect::<Vec<BigInt>>();
+                    let yi_fe : FE = ECScalar::from(&yi[i]);
+                     yi_fe.invert()
+                }).collect::<Vec<FE>>();
 
                 let hi_tag = (0..n).map(|i| {
-                    h_vec[i].clone() * &ECScalar::from(&yi_inv[i])
+                    h_vec[i].clone() * &yi_inv[i]
                 }).collect::<Vec<GE>>();
 
                 // R = <a * G> + <b_L * H_R> + c * ux
@@ -313,6 +312,7 @@ mod tests {
     fn make_ipp_32() {
         test_helper(32);
 }
+
     #[test]
     fn make_ipp_16() {
         test_helper(16);

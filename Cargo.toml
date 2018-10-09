@@ -6,8 +6,17 @@ authors = [
 ]
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["lib"]
 
 [dependencies]
-cryptography-utils = { git = "https://github.com/KZen-networks/cryptography-utils" , features =  ["curvesecp256k1"]}
+cryptography-utils = { git = "https://github.com/KZen-networks/cryptography-utils" , features =  ["curve25519"]}
 itertools = "0.7.8"
+
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "range_proof"
+path = "benches/range_proof.rs"
+harness = false
