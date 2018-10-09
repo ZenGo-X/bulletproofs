@@ -16,12 +16,12 @@ version 3 of the License, or (at your option) any later version.
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 
 extern crate cryptography_utils;
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 pub mod proofs;
 
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]
 pub enum Errors {
     InnerProductError,
     RangeProofError,
-
 }

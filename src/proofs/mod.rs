@@ -15,6 +15,5 @@ version 3 of the License, or (at your option) any later version.
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 
-
 pub mod inner_product;
 pub mod range_proof;
