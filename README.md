@@ -5,7 +5,7 @@ https://eprint.iacr.org/2017/1066.pdf
   * _Secp256k1_ using https://github.com/rust-bitcoin/rust-secp256k1/
   * _Curve25519_  using https://github.com/dalek-cryptography/curve25519-dalek
 
-## Benches
+## Benchemarks
 Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6-7x  slower constantly. 
 
 ## Usage
