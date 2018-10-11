@@ -448,19 +448,19 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 
 #[cfg(test)]
 mod tests {
-    use super::generate_random_point;
-    use super::RangeProof;
+    use proofs::range_proof::generate_random_point;
+    use proofs::range_proof::RangeProof;
+    use proofs::inner_product::InnerProductArg;
+    use Errors::{self, RangeProofError};
     use cryptography_utils::arithmetic::traits::{Converter, Modulo, Samplable};
-    use cryptography_utils::cryptographic_primitives::hashing::hash_sha256::HSha256;
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use cryptography_utils::cryptographic_primitives::hashing::traits::*;
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
-    use itertools::Itertools;
-    use proofs::inner_product::InnerProductArg;
-    use std::ops::Shr;
-    use Errors::{self, RangeProofError};
+  //  use itertools::Itertools;
+
+
 
     #[test]
     pub fn test_batch_4_range_proof_32() {
@@ -618,13 +618,16 @@ mod tests {
 
     #[test]
     pub fn test_batch_1_range_proof_8() {
+        // bit range
         let n = 8;
-        // num of proofs
+        // batch size
         let m = 1;
         let nm = n * m;
+        // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
+        // G,H - points for pederson commitment: com  = vG + rH
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
