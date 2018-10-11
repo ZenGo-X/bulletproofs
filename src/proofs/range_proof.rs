@@ -2,15 +2,15 @@
 
 Copyright 2018 by Kzen Networks
 
-This file is part of escrow-recovery library
-(https://github.com/KZen-networks/cryptography-utils)
+This file is part of bulletproof library
+(https://github.com/KZen-networks/bulletproof)
 
 bulletproof is free software: you can redistribute
 it and/or modify it under the terms of the GNU General Public
 License as published by the Free Software Foundation, either
 version 3 of the License, or (at your option) any later version.
 
-@license GPL-3.0+ <https://github.com/KZen-networks/bulletproof-utils/blob/master/LICENSE>
+@license GPL-3.0+ <https://github.com/KZen-networks/bulletproof/blob/master/LICENSE>
 */
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
@@ -23,7 +23,7 @@ use cryptography_utils::BigInt;
 use cryptography_utils::{FE, GE};
 use itertools::Itertools;
 use proofs::inner_product::InnerProductArg;
-use std::ops::{Shr, Shl};
+use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
 pub struct RangeProof {
     A: GE,
@@ -84,7 +84,7 @@ impl RangeProof {
             }).collect::<Vec<bool>>();
         let mut index: usize = 0;
         A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
-            if x.1  {
+            if x.1 {
                 acc.add_point(&x.0.get_element())
             } else {
                 acc
@@ -99,12 +99,8 @@ impl RangeProof {
             }
         });
 
-        let SR = (0..nm)
-            .map(|_| ECScalar::new_random())
-            .collect::<Vec<FE>>();
-        let SL = (0..nm)
-            .map(|_| ECScalar::new_random())
-            .collect::<Vec<FE>>();
+        let SR = (0..nm).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let SL = (0..nm).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         S = SL.iter().zip(&SR).fold(S, |acc, x| {
             let g_vec_i: GE = g_vec[index].clone();
@@ -139,7 +135,6 @@ impl RangeProof {
             .map(|i| BigInt::mod_pow(&two, &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
-
         let t0 = (0..nm)
             .map(|i| {
                 let t0_1 = BigInt::mod_sub(&aL[i], &z_bn, &order);
@@ -148,12 +143,11 @@ impl RangeProof {
                 let j = (i / bit_length) + 2;
                 let k = i % bit_length;
                 let z_index = BigInt::mod_pow(&z_bn, &BigInt::from(j as u32), &order);
-                let two_to_the_i = vec_2n[k].clone() ;
+                let two_to_the_i = vec_2n[k].clone();
                 let t0_4 = BigInt::mod_mul(&z_index, &two_to_the_i, &order);
                 let t0_5 = BigInt::mod_add(&t0_4, &t0_3, &order);
                 BigInt::mod_mul(&t0_5, &t0_1, &order)
             }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-
 
         let t1 = (0..nm)
             .map(|i| {
@@ -166,7 +160,7 @@ impl RangeProof {
                 let j = i / bit_length + 2;
                 let k = i % bit_length;
                 let z_index = BigInt::mod_pow(&z_bn, &BigInt::from(j as u32), &order);
-                let two_to_the_i = vec_2n[k].clone() ;
+                let two_to_the_i = vec_2n[k].clone();
                 let t1_7 = BigInt::mod_mul(&z_index, &two_to_the_i, &order);
                 let t1_8 = BigInt::mod_mul(&t1_7, &SL[i].to_big_int(), &order);
                 let t1_68 = BigInt::mod_add(&t1_6, &t1_8, &order);
@@ -189,12 +183,13 @@ impl RangeProof {
         let scalar_mul_2n = vec_2n.iter().fold(BigInt::zero(), |acc, x: &BigInt| {
             BigInt::mod_add(&acc, x, &order)
         });
-        let taux_3 =(0..num_of_proofs).map(|i|{
-            let j = BigInt::mod_add(&two,&BigInt::from(i as u32),&order);
-            let z_j = BigInt::mod_pow(&z_bn, &j, &order);
-            let z_j_fe:FE = ECScalar::from(&z_j);
-            z_j_fe.mul(&blinding[i].get_element())
-        }).fold(taux_2, |acc, x| acc.add(&x.get_element()));
+        let taux_3 = (0..num_of_proofs)
+            .map(|i| {
+                let j = BigInt::mod_add(&two, &BigInt::from(i as u32), &order);
+                let z_j = BigInt::mod_pow(&z_bn, &j, &order);
+                let z_j_fe: FE = ECScalar::from(&z_j);
+                z_j_fe.mul(&blinding[i].get_element())
+            }).fold(taux_2, |acc, x| acc.add(&x.get_element()));
         let tau_x = taux_1.add(&taux_3.get_element());
         let miu = (rho.mul(&fs_challenge.get_element())).add(&alpha.get_element());
 
@@ -212,13 +207,9 @@ impl RangeProof {
                 let j = i / bit_length + 2;
                 let k = i % bit_length;
                 let z_index = BigInt::mod_pow(&z_bn, &BigInt::from(j as u32), &order);
-                let two_to_the_i = vec_2n[k].clone() ;
+                let two_to_the_i = vec_2n[k].clone();
                 let Rp_2 = BigInt::mod_mul(&z_index, &two_to_the_i, &order);
-                let Rp_3 = BigInt::mod_add(
-                    &BigInt::mod_add(&z_bn, &aR[i], &order),
-                    &Rp_1,
-                    &order,
-                );
+                let Rp_3 = BigInt::mod_add(&BigInt::mod_add(&z_bn, &aR[i], &order), &Rp_1, &order);
                 let Rp_4 = BigInt::mod_mul(&yi[i], &Rp_3, &order);
                 BigInt::mod_add(&Rp_4, &Rp_2, &order)
             }).collect::<Vec<BigInt>>();
@@ -264,14 +255,14 @@ impl RangeProof {
         let sec = secret.clone();
         let mut vec_ped_zm = (0..num_of_proofs)
             .map(|i| {
-                let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2+ i) as u32), &order);
+                let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2 + i) as u32), &order);
                 let z_2_m_fe: FE = ECScalar::from(&z_2_m);
-                sec[i].mul( &z_2_m_fe.get_element())
+                sec[i].mul(&z_2_m_fe.get_element())
             }).collect::<Vec<FE>>();
         let vec_ped_zm_1 = vec_ped_zm.remove(0);
-        let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| {
-            acc.add(&x.get_element())
-        });
+        let ped_com_sum = vec_ped_zm
+            .iter()
+            .fold(vec_ped_zm_1, |acc, x| acc.add(&x.get_element()));
 
         // delta(x,y):
         let yi = (0..nm)
@@ -291,17 +282,17 @@ impl RangeProof {
             BigInt::mod_add(&acc, x, &order)
         });
 
-
-        let z_cubed_scalar_mul_2n =(0..num_of_proofs).map(|i|{
-            let j = BigInt::mod_add(&BigInt::from(3),&BigInt::from(i as u32),&order);
-            let z_j = BigInt::mod_pow(&z_bn, &j, &order);
-            BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
-        }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+        let z_cubed_scalar_mul_2n = (0..num_of_proofs)
+            .map(|i| {
+                let j = BigInt::mod_add(&BigInt::from(3), &BigInt::from(i as u32), &order);
+                let z_j = BigInt::mod_pow(&z_bn, &j, &order);
+                BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
+            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
         let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
-        let test = BigInt::mod_add(&delta ,&ped_com_sum.to_big_int(),&order);
+        let test = BigInt::mod_add(&delta, &ped_com_sum.to_big_int(), &order);
         return RangeProof {
             A,
             S,
@@ -323,7 +314,6 @@ impl RangeProof {
         ped_com: Vec<GE>,
         bit_length: usize,
     ) -> Result<bool, Errors> {
-
         let num_of_proofs = ped_com.len();
         let nm = num_of_proofs * bit_length;
         let g_vec = g_vec.to_vec();
@@ -358,13 +348,12 @@ impl RangeProof {
             BigInt::mod_add(&acc, x, &order)
         });
 
-
-        let z_cubed_scalar_mul_2n =(0..num_of_proofs).map(|i|{
-            let j = BigInt::mod_add(&BigInt::from(3),&BigInt::from(i as u32),&order);
-            let z_j = BigInt::mod_pow(&z_bn, &j, &order);
-            BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
-        }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-
+        let z_cubed_scalar_mul_2n = (0..num_of_proofs)
+            .map(|i| {
+                let j = BigInt::mod_add(&BigInt::from(3), &BigInt::from(i as u32), &order);
+                let z_j = BigInt::mod_pow(&z_bn, &j, &order);
+                BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
+            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
@@ -392,17 +381,14 @@ impl RangeProof {
         let Tx = self.T1.clone() * &fs_challenge;
         let Tx_sq = self.T2.clone() * &fs_challenge_square;
 
-
         let mut vec_ped_zm = (0..num_of_proofs)
             .map(|i| {
-                let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2+ i) as u32), &order);
+                let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2 + i) as u32), &order);
                 let z_2_m_fe: FE = ECScalar::from(&z_2_m);
                 ped_com[i].clone() * z_2_m_fe
             }).collect::<Vec<GE>>();
         let vec_ped_zm_1 = vec_ped_zm.remove(0);
-        let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| {
-            acc + x
-        });
+        let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x);
         let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
 
         let challenge_x = HSha256::create_hash(&[
@@ -426,9 +412,9 @@ impl RangeProof {
                 let z_yn = BigInt::mod_mul(&z_bn, &yi[i], &order);
                 let j = i / bit_length;
                 let k = i % bit_length;
-                let z_j = BigInt::mod_pow(&z_bn, &BigInt::from((2+j) as u32), &order);
-                let z_j_2_n = BigInt::mod_mul(&z_j, &vec_2n[k],&order);
-               // let z_sq_2n = BigInt::mod_mul(&z_squared, &vec_2n[i], &order);
+                let z_j = BigInt::mod_pow(&z_bn, &BigInt::from((2 + j) as u32), &order);
+                let z_j_2_n = BigInt::mod_mul(&z_j, &vec_2n[k], &order);
+                // let z_sq_2n = BigInt::mod_mul(&z_squared, &vec_2n[i], &order);
                 let zyn_zsq2n = BigInt::mod_add(&z_yn, &z_j_2_n, &order);
                 let zyn_zsq2n_fe: FE = ECScalar::from(&zyn_zsq2n);
                 hi_tag[i].clone() * zyn_zsq2n_fe
@@ -464,7 +450,7 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 mod tests {
     use super::generate_random_point;
     use super::RangeProof;
-    use cryptography_utils::arithmetic::traits::{Converter, Modulo,Samplable};
+    use cryptography_utils::arithmetic::traits::{Converter, Modulo, Samplable};
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha256::HSha256;
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use cryptography_utils::cryptographic_primitives::hashing::traits::*;
@@ -476,13 +462,12 @@ mod tests {
     use std::ops::Shr;
     use Errors::{self, RangeProofError};
 
-
     #[test]
     pub fn test_batch_4_range_proof_32() {
         let n = 32;
         // num of proofs
         let m = 4;
-        let nm = n*m;
+        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -507,21 +492,20 @@ mod tests {
             }).collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
-        let v_vec = (0..m).map(|i|{
-            let v = BigInt::sample_below(&range);
-            let v_fe : FE = ECScalar::from(&v);
-            v_fe
-        }).collect::<Vec<FE>>();
+        let v_vec = (0..m)
+            .map(|i| {
+                let v = BigInt::sample_below(&range);
+                let v_fe: FE = ECScalar::from(&v);
+                v_fe
+            }).collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i|{
-            ECScalar::new_random()
-        }).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
 
-        let ped_com_vec = (0..m).map(|i|{
-            let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
-            ped_com
-        }).collect::<Vec<GE>>();
-
+        let ped_com_vec = (0..m)
+            .map(|i| {
+                let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
+                ped_com
+            }).collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
@@ -534,7 +518,7 @@ mod tests {
         let n = 32;
         // num of proofs
         let m = 4;
-        let nm = n*m;
+        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -559,24 +543,23 @@ mod tests {
             }).collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
-        let mut v_vec = (0..m-1).map(|i|{
-            let v = BigInt::sample_below(&range);
-            let v_fe : FE = ECScalar::from(&v);
-            v_fe
-        }).collect::<Vec<FE>>();
+        let mut v_vec = (0..m - 1)
+            .map(|i| {
+                let v = BigInt::sample_below(&range);
+                let v_fe: FE = ECScalar::from(&v);
+                v_fe
+            }).collect::<Vec<FE>>();
 
         let mut bad_v = BigInt::from(2).pow(33);
         v_vec.push(ECScalar::from(&bad_v));
 
-        let r_vec = (0..m).map(|i|{
-            ECScalar::new_random()
-        }).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
 
-        let ped_com_vec = (0..m).map(|i|{
-            let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
-            ped_com
-        }).collect::<Vec<GE>>();
-
+        let ped_com_vec = (0..m)
+            .map(|i| {
+                let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
+                ped_com
+            }).collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
@@ -588,7 +571,7 @@ mod tests {
         let n = 16;
         // num of proofs
         let m = 2;
-        let nm = n*m;
+        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -613,21 +596,20 @@ mod tests {
             }).collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
-        let v_vec = (0..m).map(|i|{
-            let v = BigInt::sample_below(&range);
-            let v_fe : FE = ECScalar::from(&v);
-            v_fe
-        }).collect::<Vec<FE>>();
+        let v_vec = (0..m)
+            .map(|i| {
+                let v = BigInt::sample_below(&range);
+                let v_fe: FE = ECScalar::from(&v);
+                v_fe
+            }).collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i|{
-            ECScalar::new_random()
-        }).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
 
-        let ped_com_vec = (0..m).map(|i|{
-            let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
-            ped_com
-        }).collect::<Vec<GE>>();
-
+        let ped_com_vec = (0..m)
+            .map(|i| {
+                let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
+                ped_com
+            }).collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
@@ -639,7 +621,7 @@ mod tests {
         let n = 8;
         // num of proofs
         let m = 1;
-        let nm = n*m;
+        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -664,25 +646,23 @@ mod tests {
             }).collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
-        let v_vec = (0..m).map(|i|{
-            let v = BigInt::sample_below(&range);
-            let v_fe : FE = ECScalar::from(&v);
-            v_fe
-        }).collect::<Vec<FE>>();
+        let v_vec = (0..m)
+            .map(|i| {
+                let v = BigInt::sample_below(&range);
+                let v_fe: FE = ECScalar::from(&v);
+                v_fe
+            }).collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i|{
-            ECScalar::new_random()
-        }).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
 
-        let ped_com_vec = (0..m).map(|i|{
-            let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
-            ped_com
-        }).collect::<Vec<GE>>();
-
+        let ped_com_vec = (0..m)
+            .map(|i| {
+                let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
+                ped_com
+            }).collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
         assert!(result.is_ok());
     }
 }
-

@@ -1,3 +1,18 @@
+/*
+
+Copyright 2018 by Kzen Networks
+
+This file is part of bulletproof library
+(https://github.com/KZen-networks/bulletproof)
+
+bulletproof is free software: you can redistribute
+it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+@license GPL-3.0+ <https://github.com/KZen-networks/bulletproof/blob/master/LICENSE>
+*/
+
 #[macro_use]
 extern crate criterion;
 
@@ -17,11 +32,10 @@ mod bench {
 
     pub fn bench_range_proof_8(c: &mut Criterion) {
         c.bench_function("range proof", move |b| {
-
             let n = 8;
             // num of proofs
             let m = 4;
-            let nm = n*m;
+            let nm = n * m;
             let KZen: &[u8] = &[75, 90, 101, 110];
             let kzen_label = BigInt::from(KZen);
 
@@ -40,30 +54,40 @@ mod bench {
             // can run in parallel to g_vec:
             let h_vec = (0..nm)
                 .map(|i| {
-                    let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
+                    let kzen_label_j =
+                        BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                     let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                     generate_random_point(&Converter::to_vec(&hash_j))
                 }).collect::<Vec<GE>>();
 
             let range = BigInt::from(2).pow(n as u32);
-            let v_vec = (0..m).map(|i|{
-                let v = BigInt::sample_below(&range);
-                let v_fe : FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            let v_vec = (0..m)
+                .map(|i| {
+                    let v = BigInt::sample_below(&range);
+                    let v_fe: FE = ECScalar::from(&v);
+                    v_fe
+                }).collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|i|{
-                ECScalar::new_random()
-            }).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
 
-            let ped_com_vec = (0..m).map(|i|{
-                let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
-                ped_com
-            }).collect::<Vec<GE>>();
+            let ped_com_vec = (0..m)
+                .map(|i| {
+                    let ped_com = G.clone() * &v_vec[i] + H.clone() * &r_vec[i];
+                    ped_com
+                }).collect::<Vec<GE>>();
 
             b.iter(|| {
-                let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec.clone(), r_vec.clone(), n);
-                let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec.clone(), n);
+                let range_proof =
+                    RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec.clone(), r_vec.clone(), n);
+                let result = RangeProof::verify(
+                    &range_proof,
+                    &g_vec,
+                    &h_vec,
+                    &G,
+                    &H,
+                    ped_com_vec.clone(),
+                    n,
+                );
                 assert!(result.is_ok());
             })
         });
