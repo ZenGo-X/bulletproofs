@@ -15,7 +15,7 @@ mod bench {
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::{BigInt, FE, GE};
 
-    pub fn bench_range_proof_16(c: &mut Criterion) {
+    pub fn bench_range_proof_8(c: &mut Criterion) {
         c.bench_function("range proof", move |b| {
 
             let n = 8;
@@ -72,7 +72,7 @@ mod bench {
     criterion_group!{
     name = range_proof;
     config = Criterion::default().sample_size(10);
-    targets =bench_range_proof_16}
+    targets =bench_range_proof_8}
 
 }
 //fn main() {}
