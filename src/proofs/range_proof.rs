@@ -39,12 +39,12 @@ pub struct RangeProof {
 
 impl RangeProof {
     pub fn prove(
-        g_vec: &Vec<GE>,
-        h_vec: &Vec<GE>,
+        g_vec: &[GE],
+        h_vec: &[GE],
         G: &GE,
         H: &GE,
         mut secret: Vec<FE>,
-        blinding: Vec<FE>,
+        blinding: &[FE],
         bit_length: usize,
     ) -> RangeProof {
         let num_of_proofs = secret.len();
@@ -229,7 +229,7 @@ impl RangeProof {
         let L_vec = Vec::with_capacity(nm);
         let R_vec = Vec::with_capacity(nm);
         let inner_product_proof =
-            InnerProductArg::prove(&g_vec, &hi_tag, Gx, P, &Lp, &Rp, L_vec, R_vec);
+            InnerProductArg::prove(&g_vec, &hi_tag, &Gx, &P, &Lp, &Rp, L_vec, R_vec);
 
         return RangeProof {
             A,
@@ -245,17 +245,15 @@ impl RangeProof {
 
     pub fn verify(
         &self,
-        g_vec: &Vec<GE>,
-        h_vec: &Vec<GE>,
+        g_vec: &[GE],
+        h_vec: &[GE],
         G: &GE,
         H: &GE,
-        ped_com: Vec<GE>,
+        ped_com: &[GE],
         bit_length: usize,
-    ) -> Result<bool, Errors> {
+    ) -> Result<(), Errors> {
         let num_of_proofs = ped_com.len();
         let nm = num_of_proofs * bit_length;
-        let g_vec = g_vec.to_vec();
-        let h_vec = h_vec.to_vec();
 
         let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
         let base_point: GE = ECPoint::generator();
@@ -359,9 +357,9 @@ impl RangeProof {
         let P = (0..nm)
             .map(|i| g_vec[i].clone() * &z_minus_fe)
             .fold(P1, |acc, x| acc + x);
-        let verify = self.inner_product_proof.verify(g_vec, hi_tag, Gx, P);
+        let verify = self.inner_product_proof.verify(g_vec, &hi_tag, &Gx, &P);
         if verify.is_ok() && left_side.get_element() == right_side.get_element() {
-            Ok(true)
+            Ok(())
         } else {
             Err(RangeProofError)
         }
@@ -440,8 +438,8 @@ mod tests {
                 ped_com
             }).collect::<Vec<GE>>();
 
-        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
-        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
+        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
+        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 
@@ -483,7 +481,7 @@ mod tests {
                 v_fe
             }).collect::<Vec<FE>>();
 
-        let mut bad_v = BigInt::from(2).pow(33);
+        let bad_v = BigInt::from(2).pow(33);
         v_vec.push(ECScalar::from(&bad_v));
 
         let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
@@ -494,8 +492,8 @@ mod tests {
                 ped_com
             }).collect::<Vec<GE>>();
 
-        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
-        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
+        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
+        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 
@@ -544,8 +542,8 @@ mod tests {
                 ped_com
             }).collect::<Vec<GE>>();
 
-        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
-        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
+        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
+        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 
@@ -597,8 +595,8 @@ mod tests {
                 ped_com
             }).collect::<Vec<GE>>();
 
-        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
-        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
+        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
+        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 }

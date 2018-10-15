@@ -34,19 +34,15 @@ pub struct InnerProductArg {
 
 impl InnerProductArg {
     pub fn prove(
-        g_vec: &[GE],
-        hi_tag: &[GE],
-        ux: GE,
-        P: GE,
+        G: &[GE],
+        H: &[GE],
+        ux: &GE,
+        P: &GE,
         a: &[BigInt],
         b: &[BigInt],
         mut L_vec: Vec<GE>,
         mut R_vec: Vec<GE>,
     ) -> InnerProductArg {
-        let G = &g_vec[..];
-        let H = &hi_tag[..];
-        let a = &a[..];
-        let b = &b[..];
         let n = G.len();
 
         // All of the input vectors must have the same length.
@@ -135,7 +131,7 @@ impl InnerProductArg {
 
             L_vec.push(L);
             R_vec.push(R);
-            return InnerProductArg::prove(&G_new, &H_new, ux, P, &a_new, &b_new, L_vec, R_vec);
+            return InnerProductArg::prove(&G_new, &H_new, &ux, &P, &a_new, &b_new, L_vec, R_vec);
         }
 
         InnerProductArg {
@@ -146,7 +142,7 @@ impl InnerProductArg {
         }
     }
 
-    pub fn verify(&self, g_vec: Vec<GE>, hi_tag: Vec<GE>, ux: GE, P: GE) -> Result<bool, Errors> {
+    pub fn verify(&self, g_vec: &[GE], hi_tag: &[GE], ux: &GE, P: &GE) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
@@ -195,7 +191,7 @@ impl InnerProductArg {
                 a_tag: self.a_tag.clone(),
                 b_tag: self.b_tag.clone(),
             };
-            return ip.verify(G_new, H_new, ux, P_tag);
+            return ip.verify(&G_new, &H_new, ux, &P_tag);
         }
 
         let a_fe: FE = ECScalar::from(&self.a_tag);
@@ -203,10 +199,10 @@ impl InnerProductArg {
         let c = a_fe.mul(&b_fe.get_element());
         let Ga = G[0].clone() * a_fe;
         let Hb = H[0].clone() * b_fe;
-        let ux_c = ux * c;
+        let ux_c = ux.clone() * c;
         let P_calc = Ga + Hb + ux_c;
         if P.get_element() == P_calc.get_element() {
-            Ok(true)
+            Ok(())
         } else {
             Err(InnerProductError)
         }
@@ -308,8 +304,8 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, Gx.clone(), P.clone(), &a, &b, L_vec, R_vec);
-        let verifier = ipp.verify(g_vec, hi_tag, Gx, P);
+        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, &Gx, &P, &a, &b, L_vec, R_vec);
+        let verifier = ipp.verify(&g_vec, &hi_tag, &Gx, &P);
         assert!(verifier.is_ok())
     }
 
