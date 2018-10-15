@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 /*
 
 Copyright 2018 by Kzen Networks
@@ -23,6 +25,7 @@ use cryptography_utils::{FE, GE};
 use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
+
 pub struct RangeProof {
     A: GE,
     S: GE,
@@ -41,7 +44,7 @@ impl RangeProof {
         G: &GE,
         H: &GE,
         mut secret: Vec<FE>,
-        mut blinding: Vec<FE>,
+        blinding: Vec<FE>,
         bit_length: usize,
     ) -> RangeProof {
         let num_of_proofs = secret.len();
@@ -223,8 +226,8 @@ impl RangeProof {
         // line 9
         // public input : g,h,u^x,P' = g_vec, hi_tag, Gx,P
         // private input: a,b  = Lp,Rp
-        let mut L_vec = Vec::with_capacity(nm);
-        let mut R_vec = Vec::with_capacity(nm);
+        let L_vec = Vec::with_capacity(nm);
+        let R_vec = Vec::with_capacity(nm);
         let inner_product_proof =
             InnerProductArg::prove(g_vec, hi_tag, Gx, P, Lp, Rp, L_vec, R_vec);
 
@@ -391,7 +394,6 @@ mod tests {
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
     use Errors::{self, RangeProofError};
-    //  use itertools::Itertools;
 
     #[test]
     pub fn test_batch_4_range_proof_32() {
