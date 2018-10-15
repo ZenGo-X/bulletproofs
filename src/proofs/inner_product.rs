@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 /*
 
 Copyright 2018 by Kzen Networks
