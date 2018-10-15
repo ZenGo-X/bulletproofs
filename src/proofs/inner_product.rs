@@ -147,15 +147,9 @@ impl InnerProductArg {
         }
     }
 
-    pub fn verify(
-        &self,
-        mut g_vec: Vec<GE>,
-        mut hi_tag: Vec<GE>,
-        ux: GE,
-        P: GE,
-    ) -> Result<bool, Errors> {
-        let G = &mut g_vec[..];
-        let H = &mut hi_tag[..];
+    pub fn verify(&self, g_vec: Vec<GE>, hi_tag: Vec<GE>, ux: GE, P: GE) -> Result<bool, Errors> {
+        let G = &g_vec[..];
+        let H = &hi_tag[..];
         let n = G.len();
 
         // All of the input vectors must have the same length.
@@ -165,8 +159,8 @@ impl InnerProductArg {
 
         if n != 1 {
             let n = n / 2;
-            let (G_L, G_R) = G.split_at_mut(n);
-            let (H_L, H_R) = H.split_at_mut(n);
+            let (G_L, G_R) = G.split_at(n);
+            let (H_L, H_R) = H.split_at(n);
 
             let x = HSha256::create_hash_from_ge(&[&self.L[0], &self.R[0], &ux]);
             let x_bn = x.to_big_int();
@@ -251,7 +245,7 @@ mod tests {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        let mut g_vec = (0..n)
+        let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
@@ -259,7 +253,7 @@ mod tests {
             }).collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
-        let mut h_vec = (0..n)
+        let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
@@ -270,13 +264,13 @@ mod tests {
         let hash = HSha512::create_hash(&[&label]);
         let Gx = generate_random_point(&Converter::to_vec(&hash));
 
-        let mut a: Vec<_> = (0..n)
+        let a: Vec<_> = (0..n)
             .map(|_| {
                 let rand: FE = ECScalar::new_random();
                 rand.to_big_int()
             }).collect();
 
-        let mut b: Vec<_> = (0..n)
+        let b: Vec<_> = (0..n)
             .map(|_| {
                 let rand: FE = ECScalar::new_random();
                 rand.to_big_int()
@@ -313,8 +307,8 @@ mod tests {
                 hi_tag[i].clone() * bi
             }).fold(a_G, |acc, x: GE| acc + x as GE);
 
-        let mut L_vec = Vec::with_capacity(n);
-        let mut R_vec = Vec::with_capacity(n);
+        let L_vec = Vec::with_capacity(n);
+        let R_vec = Vec::with_capacity(n);
         let ipp = InnerProductArg::prove(
             g_vec.clone(),
             hi_tag.clone(),
