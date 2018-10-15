@@ -210,12 +210,14 @@ impl InnerProductArg {
 }
 
 pub fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "inner_product(a,b): lengths of vectors do not match"
+    );
     let out = BigInt::zero();
     let temp: FE = ECScalar::new_random();
     let order = temp.q();
-    if a.len() != b.len() {
-        panic!("inner_product(a,b): lengths of vectors do not match");
-    }
     let out = a.iter().zip(b).fold(out, |acc, x| {
         let aibi = BigInt::mod_mul(x.0, x.1, &order);
         BigInt::mod_add(&acc, &aibi, &order)
