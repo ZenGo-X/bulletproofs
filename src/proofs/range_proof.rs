@@ -229,7 +229,7 @@ impl RangeProof {
         let L_vec = Vec::with_capacity(nm);
         let R_vec = Vec::with_capacity(nm);
         let inner_product_proof =
-            InnerProductArg::prove(g_vec, hi_tag, Gx, P, Lp, Rp, L_vec, R_vec);
+            InnerProductArg::prove(&g_vec, &hi_tag, Gx, P, &Lp, &Rp, L_vec, R_vec);
 
         return RangeProof {
             A,

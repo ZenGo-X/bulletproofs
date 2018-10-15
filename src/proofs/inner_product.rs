@@ -34,12 +34,12 @@ pub struct InnerProductArg {
 
 impl InnerProductArg {
     pub fn prove(
-        g_vec: Vec<GE>,
-        hi_tag: Vec<GE>,
+        g_vec: &[GE],
+        hi_tag: &[GE],
         ux: GE,
         P: GE,
-        a: Vec<BigInt>,
-        b: Vec<BigInt>,
+        a: &[BigInt],
+        b: &[BigInt],
         mut L_vec: Vec<GE>,
         mut R_vec: Vec<GE>,
     ) -> InnerProductArg {
@@ -96,9 +96,6 @@ impl InnerProductArg {
                     H_R[i].clone() * bLi
                 }).fold(aR_GL, |acc, x: GE| acc + x as GE);
 
-            L_vec.push(L.clone());
-            R_vec.push(R.clone());
-
             let x = HSha256::create_hash_from_ge(&[&L, &R, &ux]);
             let x_bn = x.to_big_int();
             let order = x.q();
@@ -136,7 +133,9 @@ impl InnerProductArg {
                 }).collect::<Vec<GE>>();
             //    H = &mut H_new[..];
 
-            return InnerProductArg::prove(G_new, H_new, ux, P, a_new, b_new, L_vec, R_vec);
+            L_vec.push(L);
+            R_vec.push(R);
+            return InnerProductArg::prove(&G_new, &H_new, ux, P, &a_new, &b_new, L_vec, R_vec);
         }
 
         InnerProductArg {
@@ -147,15 +146,9 @@ impl InnerProductArg {
         }
     }
 
-    pub fn verify(
-        &self,
-        mut g_vec: Vec<GE>,
-        mut hi_tag: Vec<GE>,
-        ux: GE,
-        P: GE,
-    ) -> Result<bool, Errors> {
-        let G = &mut g_vec[..];
-        let H = &mut hi_tag[..];
+    pub fn verify(&self, g_vec: Vec<GE>, hi_tag: Vec<GE>, ux: GE, P: GE) -> Result<bool, Errors> {
+        let G = &g_vec[..];
+        let H = &hi_tag[..];
         let n = G.len();
 
         // All of the input vectors must have the same length.
@@ -165,8 +158,8 @@ impl InnerProductArg {
 
         if n != 1 {
             let n = n / 2;
-            let (G_L, G_R) = G.split_at_mut(n);
-            let (H_L, H_R) = H.split_at_mut(n);
+            let (G_L, G_R) = G.split_at(n);
+            let (H_L, H_R) = H.split_at(n);
 
             let x = HSha256::create_hash_from_ge(&[&self.L[0], &self.R[0], &ux]);
             let x_bn = x.to_big_int();
@@ -251,7 +244,7 @@ mod tests {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        let mut g_vec = (0..n)
+        let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
@@ -259,7 +252,7 @@ mod tests {
             }).collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
-        let mut h_vec = (0..n)
+        let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
@@ -270,13 +263,13 @@ mod tests {
         let hash = HSha512::create_hash(&[&label]);
         let Gx = generate_random_point(&Converter::to_vec(&hash));
 
-        let mut a: Vec<_> = (0..n)
+        let a: Vec<_> = (0..n)
             .map(|_| {
                 let rand: FE = ECScalar::new_random();
                 rand.to_big_int()
             }).collect();
 
-        let mut b: Vec<_> = (0..n)
+        let b: Vec<_> = (0..n)
             .map(|_| {
                 let rand: FE = ECScalar::new_random();
                 rand.to_big_int()
@@ -301,7 +294,7 @@ mod tests {
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: FE = ECScalar::from(&c);
-        let ux_c: GE = Gx.clone() * c_fe;
+        let ux_c: GE = Gx * c_fe;
         let a_G = (0..n)
             .map(|i| {
                 let ai: FE = ECScalar::from(&a[i]);
@@ -313,18 +306,9 @@ mod tests {
                 hi_tag[i].clone() * bi
             }).fold(a_G, |acc, x: GE| acc + x as GE);
 
-        let mut L_vec = Vec::with_capacity(n);
-        let mut R_vec = Vec::with_capacity(n);
-        let ipp = InnerProductArg::prove(
-            g_vec.clone(),
-            hi_tag.clone(),
-            Gx.clone(),
-            P.clone(),
-            a,
-            b,
-            L_vec,
-            R_vec,
-        );
+        let L_vec = Vec::with_capacity(n);
+        let R_vec = Vec::with_capacity(n);
+        let ipp = InnerProductArg::prove(g_vec, hi_tag, Gx, P, a, b, L_vec, R_vec);
         let verifier = ipp.verify(g_vec, hi_tag, Gx, P);
         assert!(verifier.is_ok())
     }
