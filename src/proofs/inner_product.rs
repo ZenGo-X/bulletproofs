@@ -20,8 +20,9 @@ use cryptography_utils::cryptographic_primitives::hashing::traits::*;
 use cryptography_utils::elliptic::curves::traits::*;
 use cryptography_utils::BigInt;
 use cryptography_utils::{FE, GE};
-use std::iter;
+
 use Errors::{self, InnerProductError};
+
 pub struct InnerProductArg {
     pub L: Vec<GE>,
     pub R: Vec<GE>,
@@ -31,20 +32,20 @@ pub struct InnerProductArg {
 
 impl InnerProductArg {
     pub fn prove(
-        mut g_vec: Vec<GE>,
-        mut hi_tag: Vec<GE>,
+        g_vec: Vec<GE>,
+        hi_tag: Vec<GE>,
         ux: GE,
         P: GE,
-        mut a: Vec<BigInt>,
-        mut b: Vec<BigInt>,
+        a: Vec<BigInt>,
+        b: Vec<BigInt>,
         mut L_vec: Vec<GE>,
         mut R_vec: Vec<GE>,
     ) -> InnerProductArg {
-        let mut G = &mut g_vec[..];
-        let mut H = &mut hi_tag[..];
-        let mut a = &mut a[..];;
-        let mut b = &mut b[..];
-        let mut n = G.len();
+        let G = &g_vec[..];
+        let H = &hi_tag[..];
+        let a = &a[..];
+        let b = &b[..];
+        let n = G.len();
 
         // All of the input vectors must have the same length.
         assert_eq!(G.len(), n);
@@ -56,11 +57,11 @@ impl InnerProductArg {
         //   let mut L_vec = Vec::with_capacity(n);
         //   let mut R_vec = Vec::with_capacity(n);
         if n != 1 {
-            n = n / 2;
-            let (a_L, a_R) = a.split_at_mut(n);
-            let (b_L, b_R) = b.split_at_mut(n);
-            let (G_L, G_R) = G.split_at_mut(n);
-            let (H_L, H_R) = H.split_at_mut(n);
+            let n = n / 2;
+            let (a_L, a_R) = a.split_at(n);
+            let (b_L, b_R) = b.split_at(n);
+            let (G_L, G_R) = G.split_at(n);
+            let (H_L, H_R) = H.split_at(n);
 
             let c_L = inner_product(&a_L, &b_R);
             let c_R = inner_product(&a_R, &b_L);
@@ -101,7 +102,7 @@ impl InnerProductArg {
             let order = x.q();
             let x_inv_fe = x.invert();
 
-            let mut a_new = (0..n)
+            let a_new = (0..n)
                 .map(|i| {
                     let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
                     let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_big_int(), &order);
@@ -109,7 +110,7 @@ impl InnerProductArg {
                 }).collect::<Vec<BigInt>>();
             //   a = &mut a_new[..];
 
-            let mut b_new = (0..n)
+            let b_new = (0..n)
                 .map(|i| {
                     let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
                     let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_big_int(), &order);
@@ -117,7 +118,7 @@ impl InnerProductArg {
                 }).collect::<Vec<BigInt>>();
             //    b = &mut b_new[..];
 
-            let mut G_new = (0..n)
+            let G_new = (0..n)
                 .map(|i| {
                     let GLx_inv = G_L[i].clone() * &x_inv_fe;
                     let GRx = G_R[i].clone() * &x;
@@ -125,7 +126,7 @@ impl InnerProductArg {
                 }).collect::<Vec<GE>>();
             //   G = &mut G_new[..];
 
-            let mut H_new = (0..n)
+            let H_new = (0..n)
                 .map(|i| {
                     let HLx = H_L[i].clone() * &x;
                     let HRx_inv = H_R[i].clone() * &x_inv_fe;
@@ -151,9 +152,9 @@ impl InnerProductArg {
         ux: GE,
         P: GE,
     ) -> Result<bool, Errors> {
-        let mut G = &mut g_vec[..];
-        let mut H = &mut hi_tag[..];
-        let mut n = G.len();
+        let G = &mut g_vec[..];
+        let H = &mut hi_tag[..];
+        let n = G.len();
 
         // All of the input vectors must have the same length.
         assert_eq!(G.len(), n);
@@ -161,7 +162,7 @@ impl InnerProductArg {
         assert!(n.is_power_of_two());
 
         if n != 1 {
-            n = n / 2;
+            let n = n / 2;
             let (G_L, G_R) = G.split_at_mut(n);
             let (H_L, H_R) = H.split_at_mut(n);
 
@@ -175,7 +176,7 @@ impl InnerProductArg {
             let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
             let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
 
-            let mut G_new = (0..n)
+            let G_new = (0..n)
                 .map(|i| {
                     let GLx_inv = G_L[i].clone() * &x_inv_fe;
                     let GRx = G_R[i].clone() * &x;
@@ -183,7 +184,7 @@ impl InnerProductArg {
                 }).collect::<Vec<GE>>();
             //   G = &mut G_new[..];
 
-            let mut H_new = (0..n)
+            let H_new = (0..n)
                 .map(|i| {
                     let HLx = H_L[i].clone() * &x;
                     let HRx_inv = H_R[i].clone() * &x_inv_fe;
@@ -218,7 +219,7 @@ impl InnerProductArg {
 }
 
 pub fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
-    let mut out = BigInt::zero();
+    let out = BigInt::zero();
     let temp: FE = ECScalar::new_random();
     let order = temp.q();
     if a.len() != b.len() {
