@@ -34,12 +34,12 @@ pub struct InnerProductArg {
 
 impl InnerProductArg {
     pub fn prove(
-        g_vec: Vec<GE>,
-        hi_tag: Vec<GE>,
+        g_vec: &[GE],
+        hi_tag: &[GE],
         ux: GE,
         P: GE,
-        a: Vec<BigInt>,
-        b: Vec<BigInt>,
+        a: &[BigInt],
+        b: &[BigInt],
         mut L_vec: Vec<GE>,
         mut R_vec: Vec<GE>,
     ) -> InnerProductArg {
@@ -96,9 +96,6 @@ impl InnerProductArg {
                     H_R[i].clone() * bLi
                 }).fold(aR_GL, |acc, x: GE| acc + x as GE);
 
-            L_vec.push(L.clone());
-            R_vec.push(R.clone());
-
             let x = HSha256::create_hash_from_ge(&[&L, &R, &ux]);
             let x_bn = x.to_big_int();
             let order = x.q();
@@ -136,7 +133,9 @@ impl InnerProductArg {
                 }).collect::<Vec<GE>>();
             //    H = &mut H_new[..];
 
-            return InnerProductArg::prove(G_new, H_new, ux, P, a_new, b_new, L_vec, R_vec);
+            L_vec.push(L);
+            R_vec.push(R);
+            return InnerProductArg::prove(&G_new, &H_new, ux, P, &a_new, &b_new, L_vec, R_vec);
         }
 
         InnerProductArg {
@@ -295,7 +294,7 @@ mod tests {
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: FE = ECScalar::from(&c);
-        let ux_c: GE = Gx.clone() * c_fe;
+        let ux_c: GE = Gx * c_fe;
         let a_G = (0..n)
             .map(|i| {
                 let ai: FE = ECScalar::from(&a[i]);
@@ -309,16 +308,7 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp = InnerProductArg::prove(
-            g_vec.clone(),
-            hi_tag.clone(),
-            Gx.clone(),
-            P.clone(),
-            a,
-            b,
-            L_vec,
-            R_vec,
-        );
+        let ipp = InnerProductArg::prove(g_vec, hi_tag, Gx, P, a, b, L_vec, R_vec);
         let verifier = ipp.verify(g_vec, hi_tag, Gx, P);
         assert!(verifier.is_ok())
     }
