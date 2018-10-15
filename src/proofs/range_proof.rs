@@ -16,12 +16,10 @@ version 3 of the License, or (at your option) any later version.
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 use cryptography_utils::arithmetic::traits::{Converter, Modulo};
 use cryptography_utils::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use cryptography_utils::cryptographic_primitives::hashing::traits::*;
 use cryptography_utils::elliptic::curves::traits::*;
 use cryptography_utils::BigInt;
 use cryptography_utils::{FE, GE};
-use itertools::Itertools;
 use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
@@ -117,9 +115,6 @@ impl RangeProof {
         let yG: GE = base_point * &y;
         let z = HSha256::create_hash_from_ge(&[&yG]);
         let z_bn = z.to_big_int();
-        let z_squared = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(2), &order);
-        let z_cubed = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(3), &order);
-
         let yi = (0..nm)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
@@ -134,20 +129,6 @@ impl RangeProof {
         let vec_2n = (0..bit_length)
             .map(|i| BigInt::mod_pow(&two, &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
-
-        let t0 = (0..nm)
-            .map(|i| {
-                let t0_1 = BigInt::mod_sub(&aL[i], &z_bn, &order);
-                let t0_2 = BigInt::mod_add(&aR[i], &z_bn, &order);
-                let t0_3 = BigInt::mod_mul(&yi[i], &t0_2, &order);
-                let j = (i / bit_length) + 2;
-                let k = i % bit_length;
-                let z_index = BigInt::mod_pow(&z_bn, &BigInt::from(j as u32), &order);
-                let two_to_the_i = vec_2n[k].clone();
-                let t0_4 = BigInt::mod_mul(&z_index, &two_to_the_i, &order);
-                let t0_5 = BigInt::mod_add(&t0_4, &t0_3, &order);
-                BigInt::mod_mul(&t0_5, &t0_1, &order)
-            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         let t1 = (0..nm)
             .map(|i| {
@@ -178,11 +159,6 @@ impl RangeProof {
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
         let taux_1 = fs_challenge.mul(&tau1.get_element());
         let taux_2 = fs_challenge_square.mul(&tau2.get_element());
-        let z_squared_fe: FE = ECScalar::from(&z_squared);
-
-        let scalar_mul_2n = vec_2n.iter().fold(BigInt::zero(), |acc, x: &BigInt| {
-            BigInt::mod_add(&acc, x, &order)
-        });
         let taux_3 = (0..num_of_proofs)
             .map(|i| {
                 let j = BigInt::mod_add(&two, &BigInt::from(i as u32), &order);
@@ -252,47 +228,6 @@ impl RangeProof {
         let inner_product_proof =
             InnerProductArg::prove(g_vec, hi_tag, Gx, P, Lp, Rp, L_vec, R_vec);
 
-        let sec = secret.clone();
-        let mut vec_ped_zm = (0..num_of_proofs)
-            .map(|i| {
-                let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2 + i) as u32), &order);
-                let z_2_m_fe: FE = ECScalar::from(&z_2_m);
-                sec[i].mul(&z_2_m_fe.get_element())
-            }).collect::<Vec<FE>>();
-        let vec_ped_zm_1 = vec_ped_zm.remove(0);
-        let ped_com_sum = vec_ped_zm
-            .iter()
-            .fold(vec_ped_zm_1, |acc, x| acc.add(&x.get_element()));
-
-        // delta(x,y):
-        let yi = (0..nm)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
-            .collect::<Vec<BigInt>>();
-
-        let scalar_mul_yn = yi
-            .iter()
-            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, x, &order));
-
-        let two = BigInt::from(2);
-        let vec_2n = (0..bit_length)
-            .map(|i| BigInt::mod_pow(&two, &BigInt::from(i as u32), &order))
-            .collect::<Vec<BigInt>>();
-
-        let scalar_mul_2n = vec_2n.iter().fold(BigInt::zero(), |acc, x: &BigInt| {
-            BigInt::mod_add(&acc, x, &order)
-        });
-
-        let z_cubed_scalar_mul_2n = (0..num_of_proofs)
-            .map(|i| {
-                let j = BigInt::mod_add(&BigInt::from(3), &BigInt::from(i as u32), &order);
-                let z_j = BigInt::mod_pow(&z_bn, &j, &order);
-                BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
-            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-
-        let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
-        let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
-        let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
-        let test = BigInt::mod_add(&delta, &ped_com_sum.to_big_int(), &order);
         return RangeProof {
             A,
             S,
@@ -328,8 +263,6 @@ impl RangeProof {
         let z_minus = BigInt::mod_sub(&order, &z.to_big_int(), &order);
         let z_minus_fe: FE = ECScalar::from(&z_minus);
         let z_squared = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(2), &order);
-        let z_cubed = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(3), &order);
-        let z_sq_fe: FE = ECScalar::from(&z_squared);
         // delta(x,y):
         let yi = (0..nm)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -448,19 +381,17 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 
 #[cfg(test)]
 mod tests {
-    use proofs::range_proof::generate_random_point;
-    use proofs::range_proof::RangeProof;
-    use proofs::inner_product::InnerProductArg;
-    use Errors::{self, RangeProofError};
     use cryptography_utils::arithmetic::traits::{Converter, Modulo, Samplable};
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use cryptography_utils::cryptographic_primitives::hashing::traits::*;
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
-  //  use itertools::Itertools;
-
-
+    use proofs::inner_product::InnerProductArg;
+    use proofs::range_proof::generate_random_point;
+    use proofs::range_proof::RangeProof;
+    use Errors::{self, RangeProofError};
+    //  use itertools::Itertools;
 
     #[test]
     pub fn test_batch_4_range_proof_32() {
