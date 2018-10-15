@@ -294,7 +294,7 @@ mod tests {
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: FE = ECScalar::from(&c);
-        let ux_c: GE = Gx * c_fe;
+        let ux_c: GE = Gx.clone() * c_fe;
         let a_G = (0..n)
             .map(|i| {
                 let ai: FE = ECScalar::from(&a[i]);
@@ -308,7 +308,7 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp = InnerProductArg::prove(g_vec, hi_tag, Gx, P, a, b, L_vec, R_vec);
+        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, Gx.clone(), P.clone(), &a, &b, L_vec, R_vec);
         let verifier = ipp.verify(g_vec, hi_tag, Gx, P);
         assert!(verifier.is_ok())
     }
