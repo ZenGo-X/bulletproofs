@@ -382,16 +382,14 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 
 #[cfg(test)]
 mod tests {
-    use cryptography_utils::arithmetic::traits::{Converter, Modulo, Samplable};
+    use cryptography_utils::arithmetic::traits::{Converter, Samplable};
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use cryptography_utils::cryptographic_primitives::hashing::traits::*;
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
-    use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
-    use Errors::{self, RangeProofError};
 
     #[test]
     pub fn test_batch_4_range_proof_32() {

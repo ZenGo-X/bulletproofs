@@ -233,10 +233,8 @@ mod tests {
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
-    use itertools::Itertools;
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
-    use std::ops::Shr;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
