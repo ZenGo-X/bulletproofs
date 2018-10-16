@@ -26,10 +26,10 @@ use cryptography_utils::{FE, GE};
 use Errors::{self, InnerProductError};
 
 pub struct InnerProductArg {
-    pub L: Vec<GE>,
-    pub R: Vec<GE>,
-    pub a_tag: BigInt,
-    pub b_tag: BigInt,
+    L: Vec<GE>,
+    R: Vec<GE>,
+    a_tag: BigInt,
+    b_tag: BigInt,
 }
 
 impl InnerProductArg {
@@ -209,7 +209,7 @@ impl InnerProductArg {
     }
 }
 
-pub fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
+fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
     assert_eq!(
         a.len(),
         b.len(),
@@ -233,10 +233,8 @@ mod tests {
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
-    use itertools::Itertools;
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
-    use std::ops::Shr;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];

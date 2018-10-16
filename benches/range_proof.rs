@@ -79,15 +79,8 @@ mod bench {
             b.iter(|| {
                 let range_proof =
                     RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec.clone(), &r_vec, n);
-                let result = RangeProof::verify(
-                    &range_proof,
-                    &g_vec,
-                    &h_vec,
-                    &G,
-                    &H,
-                    &ped_com_vec,
-                    n,
-                );
+                let result =
+                    RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
                 assert!(result.is_ok());
             })
         });

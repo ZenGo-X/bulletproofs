@@ -382,16 +382,14 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 
 #[cfg(test)]
 mod tests {
-    use cryptography_utils::arithmetic::traits::{Converter, Modulo, Samplable};
+    use cryptography_utils::arithmetic::traits::{Converter, Samplable};
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use cryptography_utils::cryptographic_primitives::hashing::traits::*;
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
-    use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
-    use Errors::{self, RangeProofError};
 
     #[test]
     pub fn test_batch_4_range_proof_32() {
@@ -424,13 +422,10 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -475,16 +470,13 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(ECScalar::from(&bad_v));
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -528,13 +520,10 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -581,13 +570,10 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
