@@ -11,33 +11,28 @@ Control range and batch size using `n,m` variables. Run `cargo bench`. For _curv
 
 ## Usage
 ```
-    use proofs::range_proof::generate_random_point;
-    use proofs::range_proof::RangeProof;
-    use proofs::inner_product::InnerProductArg;
-    use Errors::{self, RangeProofError};
-    use cryptography_utils::arithmetic::traits::{Converter, Modulo, Samplable};
+    use cryptography_utils::arithmetic::traits::{Converter, Samplable};
     use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use cryptography_utils::cryptographic_primitives::hashing::traits::*;
     use cryptography_utils::elliptic::curves::traits::*;
     use cryptography_utils::BigInt;
     use cryptography_utils::{FE, GE};
+    use proofs::range_proof::generate_random_point;
+    use proofs::range_proof::RangeProof;
     
-    
-       // bit range
+        bit range
         let n = 8;
-        // batch size
-        let m = 1;
+        // num of agg proofs
+        let m = 4;
         let nm = n * m;
-        // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        // G,H - points for pederson commitment: com  = vG + rH
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
         let H = generate_random_point(&Converter::to_vec(&hash));
-        
+
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
@@ -55,13 +50,10 @@ Control range and batch size using `n,m` variables. Run `cargo bench`. For _curv
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -69,8 +61,9 @@ Control range and batch size using `n,m` variables. Run `cargo bench`. For _curv
                 ped_com
             }).collect::<Vec<GE>>();
 
-        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
-        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
+        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
+        let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
+        assert!(result.is_ok());
 ```
 
 ## References
