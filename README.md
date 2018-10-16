@@ -2,12 +2,12 @@
 Bulletproof Rust implementation for aggregated range proofs: 
 https://eprint.iacr.org/2017/1066.pdf
 * Works for *multiple elliptic curves*. Currently supports:
-  * _Secp256k1_ using https://github.com/rust-bitcoin/rust-secp256k1/
-  * _Curve25519_  using https://github.com/dalek-cryptography/curve25519-dalek
-* The implementation is based on some design ideas presented in dalek's implementation: https://github.com/dalek-cryptography/bulletproofs and in ElementsProject implementation: https://github.com/ElementsProject/secp256k1-zkp/pull/23. This project required abstraction of elliptic curve. We rely on https://github.com/KZen-networks/cryptography-utils/blob/master/src/elliptic/curves/traits.rs for the abstraction. Both mentioned implementations cannot be generelized to other curves since they the code is tailored to a specific elliptic curve library. 
+  * _Secp256k1_ [1] 
+  * _Curve25519_[2]
+* The implementation is based on some design ideas presented in dalek's implementation [3] and in ElementsProject implementation [4] . This project required abstraction of elliptic curve. We rely on [5] for the abstraction. Both mentioned implementations cannot be generelized to other curves since they the code is tailored to a specific elliptic curve library. 
 
 ## Benchemarks
-Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6x  slower than https://github.com/dalek-cryptography/bulletproofs. 
+Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6x  slower than [3]. 
 
 ## Usage
 ```
@@ -72,3 +72,13 @@ Control range and batch size using `n,m` variables. Run `cargo bench`. For _curv
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, ped_com_vec, n);
 ```
+
+[1] https://github.com/rust-bitcoin/rust-secp256k1/ 
+
+[2] https://github.com/dalek-cryptography/curve25519-dalek
+
+[3] https://github.com/dalek-cryptography/bulletproofs
+
+[4] https://github.com/ElementsProject/secp256k1-zkp/pull/23
+
+[5] https://github.com/KZen-networks/cryptography-utils/blob/master/src/elliptic/curves/traits.rs
