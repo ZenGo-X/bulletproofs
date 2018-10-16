@@ -1,12 +1,13 @@
 # Bulletproofs
 Bulletproof Rust implementation for aggregated range proofs: 
 https://eprint.iacr.org/2017/1066.pdf
-* Works for *multiple elliptic curves* (abstracted using https://github.com/KZen-networks/cryptography-utils). Currently supports:
+* Works for *multiple elliptic curves*. Currently supports:
   * _Secp256k1_ using https://github.com/rust-bitcoin/rust-secp256k1/
   * _Curve25519_  using https://github.com/dalek-cryptography/curve25519-dalek
+* The implementation is based on some design ideas presented in dalek's implementation: https://github.com/dalek-cryptography/bulletproofs and in ElementsProject implementation: https://github.com/ElementsProject/secp256k1-zkp/pull/23. This project required abstraction of elliptic curve. We rely on https://github.com/KZen-networks/cryptography-utils/blob/master/src/elliptic/curves/traits.rs for the abstraction. Both mentioned implementations cannot be generelized to other curves since they the code is tailored to a specific elliptic curve library. 
 
 ## Benchemarks
-Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6-7x  slower constantly. 
+Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6x  slower than https://github.com/dalek-cryptography/bulletproofs. 
 
 ## Usage
 ```
