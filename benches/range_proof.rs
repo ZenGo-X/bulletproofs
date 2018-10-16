@@ -32,9 +32,9 @@ mod bench {
 
     pub fn bench_range_proof_8(c: &mut Criterion) {
         c.bench_function("range proof", move |b| {
-            let n = 8;
+            let n = 16;
             // num of proofs
-            let m = 4;
+            let m = 2;
             let nm = n * m;
             let KZen: &[u8] = &[75, 90, 101, 110];
             let kzen_label = BigInt::from(KZen);
@@ -78,14 +78,14 @@ mod bench {
 
             b.iter(|| {
                 let range_proof =
-                    RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec.clone(), r_vec.clone(), n);
+                    RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec.clone(), &r_vec, n);
                 let result = RangeProof::verify(
                     &range_proof,
                     &g_vec,
                     &h_vec,
                     &G,
                     &H,
-                    ped_com_vec.clone(),
+                    &ped_com_vec,
                     n,
                 );
                 assert!(result.is_ok());
