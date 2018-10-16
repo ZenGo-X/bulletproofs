@@ -26,10 +26,10 @@ use cryptography_utils::{FE, GE};
 use Errors::{self, InnerProductError};
 
 pub struct InnerProductArg {
-    pub L: Vec<GE>,
-    pub R: Vec<GE>,
-    pub a_tag: BigInt,
-    pub b_tag: BigInt,
+    L: Vec<GE>,
+    R: Vec<GE>,
+    a_tag: BigInt,
+    b_tag: BigInt,
 }
 
 impl InnerProductArg {
@@ -209,7 +209,7 @@ impl InnerProductArg {
     }
 }
 
-pub fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
+fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
     assert_eq!(
         a.len(),
         b.len(),
