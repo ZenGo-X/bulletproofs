@@ -422,13 +422,10 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -473,16 +470,13 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(ECScalar::from(&bad_v));
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -526,13 +520,10 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -579,13 +570,10 @@ mod tests {
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|i| {
-                let v = BigInt::sample_below(&range);
-                let v_fe: FE = ECScalar::from(&v);
-                v_fe
-            }).collect::<Vec<FE>>();
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|i| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
