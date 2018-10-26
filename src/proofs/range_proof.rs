@@ -25,6 +25,7 @@ use cryptography_utils::{FE, GE};
 use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
+use itertools::iterate;
 
 pub struct RangeProof {
     A: GE,
@@ -116,33 +117,33 @@ impl RangeProof {
         let yG: GE = base_point * &y;
         let z = HSha256::create_hash_from_ge(&[&yG]);
         let z_bn = z.to_big_int();
-        let yi = (0..nm)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
-            .collect::<Vec<BigInt>>();
+
+        let one_fe : FE = ECScalar::from(&one);
+        let yi = iterate(one_fe.clone(), | i| i.clone() * &y ).take(nm).collect::<Vec<FE>>();
 
         let t2 = (0..nm)
             .map(|i| {
-                let t2_1 = BigInt::mod_mul(&SR[i].to_big_int(), &yi[i], &order);
-                let t2_2 = BigInt::mod_mul(&t2_1, &SL[i].to_big_int(), &order);
-                t2_2
-            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+                SR[i].clone() * &yi[i] * &SL[i]
 
-        let vec_2n = (0..bit_length)
-            .map(|i| BigInt::mod_pow(&two, &BigInt::from(i as u32), &order))
-            .collect::<Vec<BigInt>>();
+            }).fold(FE::zero(), |acc, x| acc + x);
+        let t2 = t2.to_big_int();
+
+        let two_fe :FE = ECScalar::from(&two);
+        let vec_2n = iterate(one_fe.clone(), | i| i.clone() * &two_fe ).take(bit_length).collect::<Vec<FE>>();
+
 
         let t1 = (0..nm)
             .map(|i| {
                 let t1_1 = BigInt::mod_add(&aR[i], &z_bn, &order);
-                let t1_2 = BigInt::mod_mul(&t1_1, &yi[i], &order);
+                let t1_2 = BigInt::mod_mul(&t1_1, &yi[i].to_big_int(), &order);
                 let t1_3 = BigInt::mod_mul(&SL[i].to_big_int(), &t1_2, &order);
                 let t1_4 = BigInt::mod_sub(&aL[i], &z_bn, &order);
-                let t1_5 = BigInt::mod_mul(&SR[i].to_big_int(), &yi[i], &order);
+                let t1_5 = BigInt::mod_mul(&SR[i].to_big_int(), &yi[i].to_big_int(), &order);
                 let t1_6 = BigInt::mod_mul(&t1_4, &t1_5, &order);
                 let j = i / bit_length + 2;
                 let k = i % bit_length;
                 let z_index = BigInt::mod_pow(&z_bn, &BigInt::from(j as u32), &order);
-                let two_to_the_i = vec_2n[k].clone();
+                let two_to_the_i = vec_2n[k].clone().to_big_int();
                 let t1_7 = BigInt::mod_mul(&z_index, &two_to_the_i, &order);
                 let t1_8 = BigInt::mod_mul(&t1_7, &SL[i].to_big_int(), &order);
                 let t1_68 = BigInt::mod_add(&t1_6, &t1_8, &order);
@@ -184,10 +185,10 @@ impl RangeProof {
                 let j = i / bit_length + 2;
                 let k = i % bit_length;
                 let z_index = BigInt::mod_pow(&z_bn, &BigInt::from(j as u32), &order);
-                let two_to_the_i = vec_2n[k].clone();
+                let two_to_the_i = vec_2n[k].clone().to_big_int();
                 let Rp_2 = BigInt::mod_mul(&z_index, &two_to_the_i, &order);
                 let Rp_3 = BigInt::mod_add(&BigInt::mod_add(&z_bn, &aR[i], &order), &Rp_1, &order);
-                let Rp_4 = BigInt::mod_mul(&yi[i], &Rp_3, &order);
+                let Rp_4 = BigInt::mod_mul(&yi[i].to_big_int(), &Rp_3, &order);
                 BigInt::mod_add(&Rp_4, &Rp_2, &order)
             }).collect::<Vec<BigInt>>();
         let tx = Lp.iter().zip(&Rp).fold(BigInt::zero(), |acc, x| {
@@ -203,8 +204,9 @@ impl RangeProof {
 
         let yi_inv = (0..nm)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
-                yi_fe.invert()
+           //     let yi_fe: FE = ECScalar::from(&yi[i]);
+           //     yi_fe.invert()
+                yi[i].invert()
             }).collect::<Vec<FE>>();
 
         let hi_tag = (0..nm)
@@ -263,22 +265,23 @@ impl RangeProof {
         let z_minus_fe: FE = ECScalar::from(&z_minus);
         let z_squared = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(2), &order);
         // delta(x,y):
-        let yi = (0..nm)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
-            .collect::<Vec<BigInt>>();
+        let one_bn = BigInt::one();
+        let one_fe : FE = ECScalar::from(&one_bn);
+        let yi = iterate(one_fe.clone(), | i| i.clone() * &y ).take(nm).collect::<Vec<FE>>();
 
         let scalar_mul_yn = yi
             .iter()
-            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, x, &order));
-
+            .fold(FE::zero(), |acc, x| acc + x);
+        let scalar_mul_yn = scalar_mul_yn.to_big_int();
         let two = BigInt::from(2);
-        let vec_2n = (0..bit_length)
-            .map(|i| BigInt::mod_pow(&two, &BigInt::from(i as u32), &order))
-            .collect::<Vec<BigInt>>();
 
-        let scalar_mul_2n = vec_2n.iter().fold(BigInt::zero(), |acc, x: &BigInt| {
-            BigInt::mod_add(&acc, x, &order)
+        let two_fe :FE = ECScalar::from(&two);
+        let vec_2n = iterate(one_fe.clone(), | i| i.clone() * &two_fe ).take(bit_length).collect::<Vec<FE>>();
+
+        let scalar_mul_2n = vec_2n.iter().fold(FE::zero(), |acc, x| {
+            acc + x
         });
+        let scalar_mul_2n = scalar_mul_2n.to_big_int();
 
         let z_cubed_scalar_mul_2n = (0..num_of_proofs)
             .map(|i| {
@@ -293,8 +296,7 @@ impl RangeProof {
 
         let yi_inv = (0..nm)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
-                yi_fe.invert()
+                yi[i].invert()
             }).collect::<Vec<FE>>();
 
         let hi_tag = (0..nm)
@@ -341,11 +343,11 @@ impl RangeProof {
 
         let P1 = (0..nm)
             .map(|i| {
-                let z_yn = BigInt::mod_mul(&z_bn, &yi[i], &order);
+                let z_yn = BigInt::mod_mul(&z_bn, &yi[i].to_big_int(), &order);
                 let j = i / bit_length;
                 let k = i % bit_length;
                 let z_j = BigInt::mod_pow(&z_bn, &BigInt::from((2 + j) as u32), &order);
-                let z_j_2_n = BigInt::mod_mul(&z_j, &vec_2n[k], &order);
+                let z_j_2_n = BigInt::mod_mul(&z_j, &vec_2n[k].to_big_int(), &order);
                 // let z_sq_2n = BigInt::mod_mul(&z_squared, &vec_2n[i], &order);
                 let zyn_zsq2n = BigInt::mod_add(&z_yn, &z_j_2_n, &order);
                 let zyn_zsq2n_fe: FE = ECScalar::from(&zyn_zsq2n);
