@@ -2,8 +2,8 @@
 Bulletproof Rust implementation for aggregated range proofs: 
 https://eprint.iacr.org/2017/1066.pdf
 * Works for *multiple elliptic curves*. Currently supports:
-  * _Secp256k1_ [1] 
-  * _Curve25519_ [2]
+  * _secp256k1_ [1] 
+  * _ristretto_ [2]
 * The implementation is based on some design ideas presented in dalek's implementation [3] and in ElementsProject implementation [4]. This project required abstraction of elliptic curve. We rely on [5] for the abstraction. Both mentioned implementations cannot be generelized to other curves since they the code is tailored to a specific elliptic curve library. 
 
 ## Benchemarks
