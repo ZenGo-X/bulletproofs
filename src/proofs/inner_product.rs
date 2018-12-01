@@ -16,12 +16,12 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
-use cryptography_utils::arithmetic::traits::Modulo;
-use cryptography_utils::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptography_utils::cryptographic_primitives::hashing::traits::*;
-use cryptography_utils::elliptic::curves::traits::*;
-use cryptography_utils::BigInt;
-use cryptography_utils::{FE, GE};
+use curv::arithmetic::traits::Modulo;
+use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use curv::cryptographic_primitives::hashing::traits::*;
+use curv::elliptic::curves::traits::*;
+use curv::BigInt;
+use curv::{FE, GE};
 
 use Errors::{self, InnerProductError};
 
@@ -71,12 +71,14 @@ impl InnerProductArg {
                 .map(|i| {
                     let aLi: FE = ECScalar::from(&a_L[i]);
                     &G_R[i] * &aLi
-                }).fold(ux_CL, |acc, x| acc + x as GE);
+                })
+                .fold(ux_CL, |acc, x| acc + x as GE);
             let L = (0..n)
                 .map(|i| {
                     let bRi: FE = ECScalar::from(&b_R[i]);
                     &H_L[i] * &bRi
-                }).fold(aL_GR, |acc, x| acc + x as GE);
+                })
+                .fold(aL_GR, |acc, x| acc + x as GE);
 
             // R = <a_R * G_L> + <b_L * H_R> + c_R * ux
             let c_R_fe: FE = ECScalar::from(&c_R);
@@ -85,12 +87,14 @@ impl InnerProductArg {
                 .map(|i| {
                     let aRi: FE = ECScalar::from(&a_R[i]);
                     &G_L[i] * &aRi
-                }).fold(ux_CR, |acc, x: GE| acc + x as GE);
+                })
+                .fold(ux_CR, |acc, x: GE| acc + x as GE);
             let R = (0..n)
                 .map(|i| {
                     let bLi: FE = ECScalar::from(&b_L[i]);
                     &H_R[i] * &bLi
-                }).fold(aR_GL, |acc, x: GE| acc + x as GE);
+                })
+                .fold(aR_GL, |acc, x: GE| acc + x as GE);
 
             let x = HSha256::create_hash_from_ge(&[&L, &R, &ux]);
             let x_bn = x.to_big_int();
@@ -102,7 +106,8 @@ impl InnerProductArg {
                     let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
                     let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_big_int(), &order);
                     BigInt::mod_add(&aLx, &aR_minusx, &order)
-                }).collect::<Vec<BigInt>>();
+                })
+                .collect::<Vec<BigInt>>();
             //   a = &mut a_new[..];
 
             let b_new = (0..n)
@@ -110,7 +115,8 @@ impl InnerProductArg {
                     let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
                     let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_big_int(), &order);
                     BigInt::mod_add(&bRx, &bL_minusx, &order)
-                }).collect::<Vec<BigInt>>();
+                })
+                .collect::<Vec<BigInt>>();
             //    b = &mut b_new[..];
 
             let G_new = (0..n)
@@ -118,7 +124,8 @@ impl InnerProductArg {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
                     let GRx = &G_R[i] * &x;
                     GRx + GLx_inv
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
             //   G = &mut G_new[..];
 
             let H_new = (0..n)
@@ -126,7 +133,8 @@ impl InnerProductArg {
                     let HLx = &H_L[i] * &x;
                     let HRx_inv = &H_R[i] * &x_inv_fe;
                     HLx + HRx_inv
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
             //    H = &mut H_new[..];
 
             L_vec.push(L);
@@ -172,7 +180,8 @@ impl InnerProductArg {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
                     let GRx = &G_R[i] * &x;
                     GRx + GLx_inv
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
             //   G = &mut G_new[..];
 
             let H_new = (0..n)
@@ -180,7 +189,8 @@ impl InnerProductArg {
                     let HLx = &H_L[i] * &x;
                     let HRx_inv = &H_R[i] * &x_inv_fe;
                     HLx + HRx_inv
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
             //    H = &mut H_new[..];
             let Lx_sq = &self.L[0] * &x_sq_fe;
             let Rx_sq_inv = &self.R[0] * &x_inv_sq_fe;
@@ -201,7 +211,7 @@ impl InnerProductArg {
         let Hb = &H[0] * &b_fe;
         let ux_c = ux * &c;
         let P_calc = Ga + Hb + ux_c;
-        if P.get_element() == P_calc.get_element() {
+        if P.clone() == P_calc {
             Ok(())
         } else {
             Err(InnerProductError)
@@ -226,12 +236,12 @@ fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
 
 #[cfg(test)]
 mod tests {
-    use cryptography_utils::arithmetic::traits::{Converter, Modulo};
-    use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
-    use cryptography_utils::cryptographic_primitives::hashing::traits::*;
-    use cryptography_utils::elliptic::curves::traits::*;
-    use cryptography_utils::BigInt;
-    use cryptography_utils::{FE, GE};
+    use curv::arithmetic::traits::{Converter, Modulo};
+    use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
+    use curv::cryptographic_primitives::hashing::traits::*;
+    use curv::elliptic::curves::traits::*;
+    use curv::BigInt;
+    use curv::{FE, GE};
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
 
@@ -244,7 +254,8 @@ mod tests {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
@@ -252,7 +263,8 @@ mod tests {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
@@ -262,13 +274,15 @@ mod tests {
             .map(|_| {
                 let rand: FE = ECScalar::new_random();
                 rand.to_big_int()
-            }).collect();
+            })
+            .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
                 let rand: FE = ECScalar::new_random();
                 rand.to_big_int()
-            }).collect();
+            })
+            .collect();
         let c = super::inner_product(&a, &b);
 
         let y: FE = ECScalar::new_random();
@@ -281,11 +295,10 @@ mod tests {
             .map(|i| {
                 let yi_fe: FE = ECScalar::from(&yi[i]);
                 yi_fe.invert()
-            }).collect::<Vec<FE>>();
+            })
+            .collect::<Vec<FE>>();
 
-        let hi_tag = (0..n)
-            .map(|i| &h_vec[i] * &yi_inv[i])
-            .collect::<Vec<GE>>();
+        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: FE = ECScalar::from(&c);
@@ -294,12 +307,14 @@ mod tests {
             .map(|i| {
                 let ai: FE = ECScalar::from(&a[i]);
                 &g_vec[i] * &ai
-            }).fold(ux_c, |acc, x: GE| acc + x as GE);
+            })
+            .fold(ux_c, |acc, x: GE| acc + x as GE);
         let P = (0..n)
             .map(|i| {
                 let bi: FE = ECScalar::from(&b[i]);
                 &hi_tag[i] * &bi
-            }).fold(a_G, |acc, x: GE| acc + x as GE);
+            })
+            .fold(a_G, |acc, x: GE| acc + x as GE);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);

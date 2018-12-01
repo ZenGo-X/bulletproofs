@@ -16,16 +16,16 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
-use cryptography_utils::arithmetic::traits::{Converter, Modulo};
-use cryptography_utils::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use cryptography_utils::cryptographic_primitives::hashing::traits::*;
-use cryptography_utils::elliptic::curves::traits::*;
-use cryptography_utils::BigInt;
-use cryptography_utils::{FE, GE};
+use curv::arithmetic::traits::{Converter, Modulo};
+use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use curv::cryptographic_primitives::hashing::traits::*;
+use curv::elliptic::curves::traits::*;
+use curv::BigInt;
+use curv::{FE, GE};
+use itertools::iterate;
 use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
-use itertools::iterate;
 
 pub struct RangeProof {
     A: GE,
@@ -73,7 +73,8 @@ impl RangeProof {
             .map(|i| {
                 let shr_secret = secret_agg.clone().shr(i);
                 shr_secret.modulus(&two)
-            }).collect::<Vec<BigInt>>();
+            })
+            .collect::<Vec<BigInt>>();
         let aR = (0..nm)
             .map(|i| BigInt::mod_sub(&aL[i], &one, &order))
             .collect::<Vec<BigInt>>();
@@ -83,7 +84,8 @@ impl RangeProof {
                 let bignum_bit: BigInt = aL[i].clone() & BigInt::one();
                 let byte = BigInt::to_vec(&bignum_bit);
                 byte[0] == 1
-            }).collect::<Vec<bool>>();
+            })
+            .collect::<Vec<bool>>();
         let mut index: usize = 0;
         A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if x.1 {
@@ -118,19 +120,20 @@ impl RangeProof {
         let z = HSha256::create_hash_from_ge(&[&yG]);
         let z_bn = z.to_big_int();
 
-        let one_fe : FE = ECScalar::from(&one);
-        let yi = iterate(one_fe.clone(), | i| i.clone() * &y ).take(nm).collect::<Vec<FE>>();
+        let one_fe: FE = ECScalar::from(&one);
+        let yi = iterate(one_fe.clone(), |i| i.clone() * &y)
+            .take(nm)
+            .collect::<Vec<FE>>();
 
         let t2 = (0..nm)
-            .map(|i| {
-                SR[i].clone() * &yi[i] * &SL[i]
-
-            }).fold(FE::zero(), |acc, x| acc + x);
+            .map(|i| SR[i].clone() * &yi[i] * &SL[i])
+            .fold(FE::zero(), |acc, x| acc + x);
         let t2 = t2.to_big_int();
 
-        let two_fe :FE = ECScalar::from(&two);
-        let vec_2n = iterate(one_fe.clone(), | i| i.clone() * &two_fe ).take(bit_length).collect::<Vec<FE>>();
-
+        let two_fe: FE = ECScalar::from(&two);
+        let vec_2n = iterate(one_fe.clone(), |i| i.clone() * &two_fe)
+            .take(bit_length)
+            .collect::<Vec<FE>>();
 
         let t1 = (0..nm)
             .map(|i| {
@@ -148,7 +151,8 @@ impl RangeProof {
                 let t1_8 = BigInt::mod_mul(&t1_7, &SL[i].to_big_int(), &order);
                 let t1_68 = BigInt::mod_add(&t1_6, &t1_8, &order);
                 BigInt::mod_add(&t1_3, &t1_68, &order)
-            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+            })
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         let tau1: FE = ECScalar::new_random();
         let tau2: FE = ECScalar::new_random();
@@ -167,7 +171,8 @@ impl RangeProof {
                 let z_j = BigInt::mod_pow(&z_bn, &j, &order);
                 let z_j_fe: FE = ECScalar::from(&z_j);
                 z_j_fe.mul(&blinding[i].get_element())
-            }).fold(taux_2, |acc, x| acc.add(&x.get_element()));
+            })
+            .fold(taux_2, |acc, x| acc.add(&x.get_element()));
         let tau_x = taux_1.add(&taux_3.get_element());
         let miu = (rho.mul(&fs_challenge.get_element())).add(&alpha.get_element());
 
@@ -176,7 +181,8 @@ impl RangeProof {
                 let Lp_1 = (SL[i].mul(&fs_challenge.get_element())).to_big_int();
                 let Lp_2 = BigInt::mod_sub(&aL[i], &z_bn, &order);
                 BigInt::mod_add(&Lp_1, &Lp_2, &order)
-            }).collect::<Vec<BigInt>>();
+            })
+            .collect::<Vec<BigInt>>();
 
         let Rp = (0..nm)
             .map(|i| {
@@ -190,7 +196,8 @@ impl RangeProof {
                 let Rp_3 = BigInt::mod_add(&BigInt::mod_add(&z_bn, &aR[i], &order), &Rp_1, &order);
                 let Rp_4 = BigInt::mod_mul(&yi[i].to_big_int(), &Rp_3, &order);
                 BigInt::mod_add(&Rp_4, &Rp_2, &order)
-            }).collect::<Vec<BigInt>>();
+            })
+            .collect::<Vec<BigInt>>();
         let tx = Lp.iter().zip(&Rp).fold(BigInt::zero(), |acc, x| {
             let Lp_iRp_i = BigInt::mod_mul(x.0, x.1, &order);
             BigInt::mod_add(&acc, &Lp_iRp_i, &order)
@@ -204,14 +211,13 @@ impl RangeProof {
 
         let yi_inv = (0..nm)
             .map(|i| {
-           //     let yi_fe: FE = ECScalar::from(&yi[i]);
-           //     yi_fe.invert()
+                //     let yi_fe: FE = ECScalar::from(&yi[i]);
+                //     yi_fe.invert()
                 yi[i].invert()
-            }).collect::<Vec<FE>>();
+            })
+            .collect::<Vec<FE>>();
 
-        let hi_tag = (0..nm)
-            .map(|i| &h_vec[i] * &yi_inv[i])
-            .collect::<Vec<GE>>();
+        let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // P' = P' g^l
         let P = g_vec.iter().zip(&Lp).fold(P, |acc, x| {
@@ -266,21 +272,21 @@ impl RangeProof {
         let z_squared = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(2), &order);
         // delta(x,y):
         let one_bn = BigInt::one();
-        let one_fe : FE = ECScalar::from(&one_bn);
-        let yi = iterate(one_fe.clone(), | i| i.clone() * &y ).take(nm).collect::<Vec<FE>>();
+        let one_fe: FE = ECScalar::from(&one_bn);
+        let yi = iterate(one_fe.clone(), |i| i.clone() * &y)
+            .take(nm)
+            .collect::<Vec<FE>>();
 
-        let scalar_mul_yn = yi
-            .iter()
-            .fold(FE::zero(), |acc, x| acc + x);
+        let scalar_mul_yn = yi.iter().fold(FE::zero(), |acc, x| acc + x);
         let scalar_mul_yn = scalar_mul_yn.to_big_int();
         let two = BigInt::from(2);
 
-        let two_fe :FE = ECScalar::from(&two);
-        let vec_2n = iterate(one_fe.clone(), | i| i.clone() * &two_fe ).take(bit_length).collect::<Vec<FE>>();
+        let two_fe: FE = ECScalar::from(&two);
+        let vec_2n = iterate(one_fe.clone(), |i| i.clone() * &two_fe)
+            .take(bit_length)
+            .collect::<Vec<FE>>();
 
-        let scalar_mul_2n = vec_2n.iter().fold(FE::zero(), |acc, x| {
-            acc + x
-        });
+        let scalar_mul_2n = vec_2n.iter().fold(FE::zero(), |acc, x| acc + x);
         let scalar_mul_2n = scalar_mul_2n.to_big_int();
 
         let z_cubed_scalar_mul_2n = (0..num_of_proofs)
@@ -288,20 +294,16 @@ impl RangeProof {
                 let j = BigInt::mod_add(&BigInt::from(3), &BigInt::from(i as u32), &order);
                 let z_j = BigInt::mod_pow(&z_bn, &j, &order);
                 BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
-            }).fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+            })
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
         let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
 
-        let yi_inv = (0..nm)
-            .map(|i| {
-                yi[i].invert()
-            }).collect::<Vec<FE>>();
+        let yi_inv = (0..nm).map(|i| yi[i].invert()).collect::<Vec<FE>>();
 
-        let hi_tag = (0..nm)
-            .map(|i| &h_vec[i] * &yi_inv[i])
-            .collect::<Vec<GE>>();
+        let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         let fs_challenge = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
@@ -320,7 +322,8 @@ impl RangeProof {
                 let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2 + i) as u32), &order);
                 let z_2_m_fe: FE = ECScalar::from(&z_2_m);
                 &ped_com[i] * &z_2_m_fe
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
         let vec_ped_zm_1 = vec_ped_zm.remove(0);
         let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x);
         let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
@@ -352,13 +355,14 @@ impl RangeProof {
                 let zyn_zsq2n = BigInt::mod_add(&z_yn, &z_j_2_n, &order);
                 let zyn_zsq2n_fe: FE = ECScalar::from(&zyn_zsq2n);
                 &hi_tag[i] * &zyn_zsq2n_fe
-            }).fold(P, |acc, x| acc + x);
+            })
+            .fold(P, |acc, x| acc + x);
 
         let P = (0..nm)
             .map(|i| &g_vec[i] * &z_minus_fe)
             .fold(P1, |acc, x| acc + x);
         let verify = self.inner_product_proof.verify(g_vec, &hi_tag, &Gx, &P);
-        if verify.is_ok() && left_side.get_element() == right_side.get_element() {
+        if verify.is_ok() && left_side == right_side {
             Ok(())
         } else {
             Err(RangeProofError)
@@ -381,12 +385,12 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 
 #[cfg(test)]
 mod tests {
-    use cryptography_utils::arithmetic::traits::{Converter, Samplable};
-    use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
-    use cryptography_utils::cryptographic_primitives::hashing::traits::*;
-    use cryptography_utils::elliptic::curves::traits::*;
-    use cryptography_utils::BigInt;
-    use cryptography_utils::{FE, GE};
+    use curv::arithmetic::traits::{Converter, Samplable};
+    use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
+    use curv::cryptographic_primitives::hashing::traits::*;
+    use curv::elliptic::curves::traits::*;
+    use curv::BigInt;
+    use curv::{FE, GE};
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
 
@@ -409,7 +413,8 @@ mod tests {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..nm)
@@ -417,7 +422,8 @@ mod tests {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
@@ -430,7 +436,8 @@ mod tests {
             .map(|i| {
                 let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
@@ -457,7 +464,8 @@ mod tests {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..nm)
@@ -465,7 +473,8 @@ mod tests {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
@@ -481,7 +490,8 @@ mod tests {
             .map(|i| {
                 let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
@@ -507,7 +517,8 @@ mod tests {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..nm)
@@ -515,7 +526,8 @@ mod tests {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
@@ -528,7 +540,8 @@ mod tests {
             .map(|i| {
                 let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
@@ -557,7 +570,8 @@ mod tests {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..nm)
@@ -565,7 +579,8 @@ mod tests {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
@@ -578,7 +593,8 @@ mod tests {
             .map(|i| {
                 let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
-            }).collect::<Vec<GE>>();
+            })
+            .collect::<Vec<GE>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
