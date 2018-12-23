@@ -17,17 +17,17 @@ version 3 of the License, or (at your option) any later version.
 extern crate criterion;
 
 extern crate bulletproof;
-extern crate cryptography_utils;
+extern crate curv;
 
 mod bench {
 
     use bulletproof::proofs::range_proof::*;
     use criterion::Criterion;
-    use cryptography_utils::arithmetic::traits::{Converter, Samplable};
-    use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
-    use cryptography_utils::cryptographic_primitives::hashing::traits::*;
-    use cryptography_utils::elliptic::curves::traits::*;
-    use cryptography_utils::{BigInt, FE, GE};
+    use curv::arithmetic::traits::{Converter, Samplable};
+    use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
+    use curv::cryptographic_primitives::hashing::traits::*;
+    use curv::elliptic::curves::traits::*;
+    use curv::{BigInt, FE, GE};
 
     pub fn bench_range_proof_8(c: &mut Criterion) {
         c.bench_function("range proof", move |b| {
@@ -48,7 +48,8 @@ mod bench {
                     let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                     let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                     generate_random_point(&Converter::to_vec(&hash_i))
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
 
             // can run in parallel to g_vec:
             let h_vec = (0..nm)
@@ -57,7 +58,8 @@ mod bench {
                         BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                     let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                     generate_random_point(&Converter::to_vec(&hash_j))
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
 
             let range = BigInt::from(2).pow(n as u32);
             let v_vec = (0..m)
@@ -65,15 +67,18 @@ mod bench {
                     let v = BigInt::sample_below(&range);
                     let v_fe: FE = ECScalar::from(&v);
                     v_fe
-                }).collect::<Vec<FE>>();
+                })
+                .collect::<Vec<FE>>();
 
             let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g.scalar_mul(&v_vec[i].get_element()) + h.scalar_mul(&r_vec[i].get_element());
+                    let ped_com = g.scalar_mul(&v_vec[i].get_element())
+                        + h.scalar_mul(&r_vec[i].get_element());
                     ped_com
-                }).collect::<Vec<GE>>();
+                })
+                .collect::<Vec<GE>>();
 
             b.iter(|| {
                 let range_proof =
