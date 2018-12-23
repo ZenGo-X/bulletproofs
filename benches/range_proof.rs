@@ -90,7 +90,7 @@ mod bench {
         });
     }
 
-    criterion_group!{
+    criterion_group! {
     name = range_proof;
     config = Criterion::default().sample_size(10);
     targets =bench_range_proof_8}

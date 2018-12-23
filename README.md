@@ -4,19 +4,20 @@ https://eprint.iacr.org/2017/1066.pdf
 * Works for *multiple elliptic curves*. Currently supports:
   * _secp256k1_ [1] 
   * _ristretto_ [2]
-* The implementation is based on some design ideas presented in dalek's implementation [3] and in ElementsProject implementation [4]. This project required abstraction of elliptic curve. We rely on [5] for the abstraction. Both mentioned implementations cannot be generelized to other curves since they the code is tailored to a specific elliptic curve library. 
+  * _ed25519_ [3]
+* The implementation is based on some design ideas presented in dalek's implementation [4] and in ElementsProject implementation [5]. This project required abstraction of elliptic curve. We rely on [6] for the abstraction. Both mentioned implementations cannot be generelized to other curves since they the code is tailored to a specific elliptic curve library. 
 
 ## Benchemarks
-Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6x  slower than [3]. 
+Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6x  slower than [4]. 
 
 ## Usage
 ```
-    use cryptography_utils::arithmetic::traits::{Converter, Samplable};
-    use cryptography_utils::cryptographic_primitives::hashing::hash_sha512::HSha512;
-    use cryptography_utils::cryptographic_primitives::hashing::traits::*;
-    use cryptography_utils::elliptic::curves::traits::*;
-    use cryptography_utils::BigInt;
-    use cryptography_utils::{FE, GE};
+    use curv::arithmetic::traits::{Converter, Samplable};
+    use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
+    use curv::cryptographic_primitives::hashing::traits::*;
+    use curv::elliptic::curves::traits::*;
+    use curv::BigInt;
+    use curv::{FE, GE};
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
     
@@ -71,8 +72,10 @@ Control range and batch size using `n,m` variables. Run `cargo bench`. For _curv
 
 [2] https://github.com/dalek-cryptography/curve25519-dalek
 
-[3] https://github.com/dalek-cryptography/bulletproofs
+[3] https://github.com/typed-io/cryptoxide/blob/master/src/curve25519.rs
 
-[4] https://github.com/ElementsProject/secp256k1-zkp/pull/23
+[4] https://github.com/dalek-cryptography/bulletproofs
 
-[5] https://github.com/KZen-networks/cryptography-utils/blob/master/src/elliptic/curves/traits.rs
+[5] https://github.com/ElementsProject/secp256k1-zkp/pull/23
+
+[6] https://github.com/KZen-networks/cryptography-utils/blob/master/src/elliptic/curves/traits.rs
