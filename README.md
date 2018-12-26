@@ -11,7 +11,7 @@ https://eprint.iacr.org/2017/1066.pdf
 Control range and batch size using `n,m` variables. Run `cargo bench`. For _curve25519_ the current implementation is 6x  slower than [4]. 
 
 ## Usage
-```
+```Rust
     use curv::arithmetic::traits::{Converter, Samplable};
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
