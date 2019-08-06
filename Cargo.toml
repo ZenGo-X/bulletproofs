@@ -9,7 +9,7 @@ authors = [
 crate-type = ["lib"]
 
 [dependencies]
-curv = { git = "https://github.com/KZen-networks/curv" , features =  ["ec_secp256k1"]}
+curv = { git = "https://github.com/KZen-networks/curv" , features =  ["ec_secp256k1"], tag = "v0.1.0"}
 itertools = "0.7.8"
 serde = "1.0"
 serde_derive = "1.0"
