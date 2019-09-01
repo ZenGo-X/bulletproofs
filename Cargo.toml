@@ -1,6 +1,6 @@
 [package]
 name = "bulletproof"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
     "Omer <omer@kzencorp.com>",
 ]
@@ -9,7 +9,7 @@ authors = [
 crate-type = ["lib"]
 
 [dependencies]
-curv = { git = "https://github.com/KZen-networks/curv" , branch = "feature/libra-support", features =  ["ec_secp256k1"]}
+curv = { git = "https://github.com/KZen-networks/curv" , tag = "v0.2.0", features =  ["ec_secp256k1"]}
 itertools = "0.7.8"
 serde = "1.0"
 serde_derive = "1.0"
