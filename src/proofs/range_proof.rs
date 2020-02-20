@@ -372,16 +372,7 @@ impl RangeProof {
 }
 
 pub fn generate_random_point(bytes: &[u8]) -> GE {
-    let result: Result<GE, _> = ECPoint::from_bytes(&bytes);
-    if result.is_ok() {
-        return result.unwrap();
-    } else {
-        let two = BigInt::from(2);
-        let bn = BigInt::from(bytes);
-        let bn_times_two = BigInt::mod_mul(&bn, &two, &FE::q());
-        let bytes = BigInt::to_vec(&bn_times_two);
-        return generate_random_point(&bytes);
-    }
+    GE::random_point()
 }
 
 #[cfg(test)]
