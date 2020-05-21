@@ -25,7 +25,7 @@ use curv::{FE, GE};
 
 use Errors::{self, InnerProductError};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InnerProductArg {
     L: Vec<GE>,
     R: Vec<GE>,

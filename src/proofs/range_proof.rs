@@ -27,7 +27,7 @@ use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RangeProof {
     A: GE,
     S: GE,
