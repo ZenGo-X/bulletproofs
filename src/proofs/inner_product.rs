@@ -218,6 +218,99 @@ impl InnerProductArg {
             Err(InnerProductError)
         }
     }
+
+    ///
+    /// Returns Ok() if the given inner product satisfies the verification equations,
+    /// else returns `InnerProductError`.
+    /// 
+    /// Uses a single multiexponentiation (multiscalar multiplication in additive notation)
+    /// check to verify an inner product proof. 
+    /// 
+    pub fn fast_verify(&self, g_vec: &[GE], hi_tag: &[GE], ux: &GE, P: &GE)
+    -> Result<(), Errors> {
+        let G = &g_vec[..];
+        let H = &hi_tag[..];
+        let n = G.len();
+        let order = FE::q();
+
+        // All of the input vectors must have the same length.
+        assert_eq!(G.len(), n);
+        assert_eq!(H.len(), n);
+        assert!(n.is_power_of_two());
+
+        let lg_n = self.L.len();
+
+        let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
+        let mut x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
+        let mut minus_x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
+        let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
+        let mut allinv = BigInt::one();
+        for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
+
+            let x = HSha256::create_hash_from_ge(&[&Li, &Ri, &ux]);
+            let x_bn = x.to_big_int();
+            let x_inv_fe = x.invert();
+            let x_inv_bn = x_inv_fe.to_big_int();
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
+            let x_inv_sq_bn =
+                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
+            // let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
+            // let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
+
+            x_sq_vec.push(x_sq_bn.clone());
+            x_inv_sq_vec.push(x_inv_sq_bn.clone());
+            minus_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_sq_bn, &order));
+            minus_x_inv_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_inv_sq_bn, &order));
+            allinv = allinv * x_inv_bn;
+        }
+
+        let mut s: Vec<BigInt> = Vec::with_capacity(n);
+        s.push(allinv);
+        for i in 1..n {
+            let lg_i = (32 - 1 - (i as u32).leading_zeros()) as usize;
+            let k = 1 << lg_i;
+            // The challenges are stored in "creation order" as [x_k,...,x_1],
+            // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
+            let x_lg_i_sq = x_sq_vec[(lg_n - 1) - lg_i].clone();
+            s.push(s[i - k].clone() * x_lg_i_sq);
+        }
+
+        let a_times_s: Vec<BigInt> = (0..n).map(|i| BigInt::mod_mul(&s[i], &self.a_tag, &order)).collect();
+
+        let b_div_s: Vec<BigInt> = (0..n).map(|i| {
+            let s_inv_i = BigInt::mod_inv(&s[i], &order);
+            BigInt::mod_mul(&s_inv_i, &self.b_tag, &order)
+        })
+        .collect();
+
+        let mut scalars: Vec<BigInt> = Vec::with_capacity(2*n + 2*lg_n + 1);
+        scalars.extend_from_slice(&a_times_s);
+        scalars.extend_from_slice(&b_div_s);
+        scalars.extend_from_slice(&minus_x_sq_vec);
+        scalars.extend_from_slice(&minus_x_inv_sq_vec);
+
+        let mut points: Vec<GE> = Vec::with_capacity(2*n + 2*lg_n + 1);
+        points.extend_from_slice(g_vec);
+        points.extend_from_slice(hi_tag);
+        points.extend_from_slice(&self.L);
+        points.extend_from_slice(&self.R);
+
+        let c = BigInt::mod_mul(&self.a_tag, &self.b_tag, &order);
+        let ux_c = ux * &ECScalar::from(&c);
+
+        let tot_len = points.len();
+
+        let expect_P = (0..tot_len).map(|i| {
+            points[i] * &ECScalar::from(&scalars[i])
+        }).
+        fold(ux_c, |acc, x| acc + x as GE);
+
+        if *P == expect_P {
+            Ok(())
+        } else {
+            Err(InnerProductError)
+        }
+    }
 }
 
 fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
@@ -324,6 +417,84 @@ mod tests {
         assert!(verifier.is_ok())
     }
 
+    fn test_helper_fast_verify(n: usize) {
+        let KZen: &[u8] = &[75, 90, 101, 110];
+        let kzen_label = BigInt::from(KZen);
+
+        let g_vec = (0..n)
+            .map(|i| {
+                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
+                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                generate_random_point(&Converter::to_vec(&hash_i))
+            })
+            .collect::<Vec<GE>>();
+
+        // can run in parallel to g_vec:
+        let h_vec = (0..n)
+            .map(|i| {
+                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
+                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                generate_random_point(&Converter::to_vec(&hash_j))
+            })
+            .collect::<Vec<GE>>();
+
+        let label = BigInt::from(1);
+        let hash = HSha512::create_hash(&[&label]);
+        let Gx = generate_random_point(&Converter::to_vec(&hash));
+
+        let a: Vec<_> = (0..n)
+            .map(|_| {
+                let rand: FE = ECScalar::new_random();
+                rand.to_big_int()
+            })
+            .collect();
+
+        let b: Vec<_> = (0..n)
+            .map(|_| {
+                let rand: FE = ECScalar::new_random();
+                rand.to_big_int()
+            })
+            .collect();
+        let c = super::inner_product(&a, &b);
+
+        let y: FE = ECScalar::new_random();
+        let order = FE::q();
+        let yi = (0..n)
+            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .collect::<Vec<BigInt>>();
+
+        let yi_inv = (0..n)
+            .map(|i| {
+                let yi_fe: FE = ECScalar::from(&yi[i]);
+                yi_fe.invert()
+            })
+            .collect::<Vec<FE>>();
+
+        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+
+        // R = <a * G> + <b_L * H_R> + c * ux
+        let c_fe: FE = ECScalar::from(&c);
+        let ux_c: GE = &Gx * &c_fe;
+        let a_G = (0..n)
+            .map(|i| {
+                let ai: FE = ECScalar::from(&a[i]);
+                &g_vec[i] * &ai
+            })
+            .fold(ux_c, |acc, x: GE| acc + x as GE);
+        let P = (0..n)
+            .map(|i| {
+                let bi: FE = ECScalar::from(&b[i]);
+                &hi_tag[i] * &bi
+            })
+            .fold(a_G, |acc, x: GE| acc + x as GE);
+
+        let L_vec = Vec::with_capacity(n);
+        let R_vec = Vec::with_capacity(n);
+        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, &Gx, &P, &a, &b, L_vec, R_vec);
+        let verifier = ipp.fast_verify(&g_vec, &hi_tag, &Gx, &P);
+        assert!(verifier.is_ok())
+    }
+
     #[test]
     fn make_ipp_32() {
         test_helper(32);
@@ -352,5 +523,34 @@ mod tests {
     fn make_ipp_1() {
         test_helper(1);
     }
+
+    #[test]
+    fn make_ipp_32_fast_verify(){
+        test_helper_fast_verify(32);
+    }
+
+    #[test]
+    fn make_ipp_16_fast_verify() {
+        test_helper_fast_verify(16);
+    }
+    #[test]
+    fn make_ipp_8_fast_verify() {
+        test_helper_fast_verify(8);
+    }
+
+    #[test]
+    fn make_ipp_4_fast_verify() {
+        test_helper_fast_verify(4);
+    }
+
+    #[test]
+    fn make_ipp_2_fast_verify() {
+        test_helper_fast_verify(2);
+    }
+
+    #[test]
+    fn make_ipp_1_fast_verify() {
+        test_helper_fast_verify(1);
+    }    
 
 }
