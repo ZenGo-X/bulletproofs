@@ -65,37 +65,55 @@ impl InnerProductArg {
             let c_L = inner_product(&a_L, &b_R);
             let c_R = inner_product(&a_R, &b_L);
 
+            // Note that no element in vectors a_L and b_R can be 0
+            // since 0 is an invalid secret key!
+            //
             // L = <a_L * G_R> + <b_R * H_L> + c_L * ux
             let c_L_fe: FE = ECScalar::from(&c_L);
             let ux_CL: GE = ux * &c_L_fe;
-            let aL_GR = (0..n)
-                .map(|i| {
-                    let aLi: FE = ECScalar::from(&a_L[i]);
-                    &G_R[i] * &aLi
-                })
-                .fold(ux_CL, |acc, x| acc + x as GE);
-            let L = (0..n)
-                .map(|i| {
-                    let bRi: FE = ECScalar::from(&b_R[i]);
-                    &H_L[i] * &bRi
-                })
-                .fold(aL_GR, |acc, x| acc + x as GE);
+            let aL_GR = G_R.iter().zip(a_L.clone()).fold(ux_CL, |acc, x| {
+                if x.1 != &BigInt::zero() {
+                    let aLi: FE = ECScalar::from(&x.1);
+                    let aLi_GRi: GE = x.0 * &aLi;
+                    acc.add_point(&aLi_GRi.get_element())
+                } else {
+                    acc
+                }
+            });  
+            let L = H_L.iter().zip(b_R.clone()).fold(aL_GR, |acc, x| {
+                if x.1 != &BigInt::zero() {
+                    let bRi: FE = ECScalar::from(&x.1);
+                    let bRi_HLi: GE = x.0 * &bRi;
+                    acc.add_point(&bRi_HLi.get_element())
+                } else {
+                    acc
+                }
+            });
 
+            // Note that no element in vectors a_R and b_L can be 0
+            // since 0 is an invalid secret key!
+            //
             // R = <a_R * G_L> + <b_L * H_R> + c_R * ux
             let c_R_fe: FE = ECScalar::from(&c_R);
-            let ux_CR: GE = ux * &c_R_fe;
-            let aR_GL = (0..n)
-                .map(|i| {
-                    let aRi: FE = ECScalar::from(&a_R[i]);
-                    &G_L[i] * &aRi
-                })
-                .fold(ux_CR, |acc, x: GE| acc + x as GE);
-            let R = (0..n)
-                .map(|i| {
-                    let bLi: FE = ECScalar::from(&b_L[i]);
-                    &H_R[i] * &bLi
-                })
-                .fold(aR_GL, |acc, x: GE| acc + x as GE);
+            let ux_CR: GE = ux * &c_R_fe;       
+            let aR_GL = G_L.iter().zip(a_R.clone()).fold(ux_CR, |acc, x| {
+                if x.1 != &BigInt::zero() {
+                    let aRi: FE = ECScalar::from(&x.1);
+                    let aRi_GLi: GE = x.0 * &aRi;
+                    acc.add_point(&aRi_GLi.get_element())
+                } else {
+                    acc
+                }
+            });  
+            let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
+                if x.1 != &BigInt::zero() {
+                    let bLi: FE = ECScalar::from(&x.1);
+                    let bLi_HRi: GE = x.0 * &bLi;
+                    acc.add_point(&bLi_HRi.get_element())
+                } else {
+                    acc
+                }
+            });
 
             let x = HSha256::create_hash_from_ge(&[&L, &R, &ux]);
             let x_bn = x.to_big_int();
@@ -495,6 +513,99 @@ mod tests {
         assert!(verifier.is_ok())
     }
 
+    fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
+
+        let KZen: &[u8] = &[75, 90, 101, 110];
+        let kzen_label = BigInt::from(KZen);
+
+        let g_vec = (0..n)
+            .map(|i| {
+                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
+                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                generate_random_point(&Converter::to_vec(&hash_i))
+            })
+            .collect::<Vec<GE>>();
+
+        // can run in parallel to g_vec:
+        let h_vec = (0..n)
+            .map(|i| {
+                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
+                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                generate_random_point(&Converter::to_vec(&hash_j))
+            })
+            .collect::<Vec<GE>>();
+
+        let label = BigInt::from(1);
+        let hash = HSha512::create_hash(&[&label]);
+        let Gx = generate_random_point(&Converter::to_vec(&hash));
+
+        // let a: Vec<_> = (0..n)
+        //     .map(|_| {
+        //         let rand: FE = ECScalar::new_random();
+        //         rand.to_big_int()
+        //     })
+        //     .collect();
+
+        // let b: Vec<_> = (0..n)
+        //     .map(|_| {
+        //         let rand: FE = ECScalar::new_random();
+        //         rand.to_big_int()
+        //     })
+        //     .collect();
+        let c = super::inner_product(&a, &b);
+        
+        let y: FE = ECScalar::new_random();
+        let order = FE::q();
+        let yi = (0..n)
+            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .collect::<Vec<BigInt>>();
+
+        let yi_inv = (0..n)
+            .map(|i| {
+                let yi_fe: FE = ECScalar::from(&yi[i]);
+                yi_fe.invert()
+            })
+            .collect::<Vec<FE>>();
+
+        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+
+        // R = <a * G> + <b_L * H_R> + c * ux
+        let c_fe: FE = ECScalar::from(&c);
+
+        let ux_c: GE = &Gx * &c_fe;
+        // let a_G = g_vec.iter().zip(a.clone()).fold(ux_c, |acc, x| {
+        //     if x.1 != BigInt::zero() {
+        //         // Mult and Add only if the element cL[i] is not zero
+        //         let cL_i_fe: FE = ECScalar::from(&x.1);
+        //         let cL_i_fe_g_i: GE = x.0 * &cL_i_fe;
+        //         acc.add_point(&cL_i_fe_g_i.get_element())
+        //     } else {
+        //         // move on otherwise
+        //         acc
+        //     }
+        // });
+
+        
+        let a_G = (0..m)
+            .map(|i| {
+                let ai: FE = ECScalar::from(&a[i]);
+                &g_vec[i] * &ai
+            })
+            .fold(ux_c, |acc, x: GE| acc + x as GE);
+        let P = (0..m)
+            .map(|i| {
+                let bi: FE = ECScalar::from(&b[i]);
+                &hi_tag[i] * &bi
+            })
+            .fold(a_G, |acc, x: GE| acc + x as GE);
+
+        let L_vec = Vec::with_capacity(n);
+        let R_vec = Vec::with_capacity(n);
+        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, &Gx, &P, &a, &b, L_vec, R_vec);
+        let verifier = ipp.verify(&g_vec, &hi_tag, &Gx, &P);
+        assert!(verifier.is_ok())
+    }
+
     #[test]
     fn make_ipp_32() {
         test_helper(32);
@@ -551,6 +662,40 @@ mod tests {
     #[test]
     fn make_ipp_1_fast_verify() {
         test_helper_fast_verify(1);
-    }    
+    }
+    
+    #[test]
+    fn make_ipp_non_power_2() {
+
+        // Create random scalar vectors a, b with size non-power of 2
+        let n: usize = 9;
+        let mut a: Vec<_> = (0..n)
+            .map(|_| {
+                let rand: FE = ECScalar::new_random();
+                rand.to_big_int()
+            })
+            .collect();
+
+        let mut b: Vec<_> = (0..n)
+            .map(|_| {
+                let rand: FE = ECScalar::new_random();
+                rand.to_big_int()
+            })
+            .collect();
+
+        // next power of 2
+        let _n: usize = n.next_power_of_two();
+        let zero_append_vec = vec![BigInt::zero(); _n - n];
+
+        // zero-appending at the end of a, b
+        // let mut padded_a = a.clone();
+        a.extend_from_slice(&zero_append_vec);
+
+        // let mut padded_b = b.clone();
+        b.extend_from_slice(&zero_append_vec);
+
+
+        test_helper_non_power_2(n, _n, &a, &b);
+    }
 
 }
