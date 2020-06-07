@@ -272,9 +272,7 @@ impl InnerProductArg {
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            // let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
-            // let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
-
+            
             x_sq_vec.push(x_sq_bn.clone());
             x_inv_sq_vec.push(x_inv_sq_bn.clone());
             minus_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_sq_bn, &order));
@@ -539,19 +537,6 @@ mod tests {
         let hash = HSha512::create_hash(&[&label]);
         let Gx = generate_random_point(&Converter::to_vec(&hash));
 
-        // let a: Vec<_> = (0..n)
-        //     .map(|_| {
-        //         let rand: FE = ECScalar::new_random();
-        //         rand.to_big_int()
-        //     })
-        //     .collect();
-
-        // let b: Vec<_> = (0..n)
-        //     .map(|_| {
-        //         let rand: FE = ECScalar::new_random();
-        //         rand.to_big_int()
-        //     })
-        //     .collect();
         let c = super::inner_product(&a, &b);
         
         let y: FE = ECScalar::new_random();
@@ -573,18 +558,6 @@ mod tests {
         let c_fe: FE = ECScalar::from(&c);
 
         let ux_c: GE = &Gx * &c_fe;
-        // let a_G = g_vec.iter().zip(a.clone()).fold(ux_c, |acc, x| {
-        //     if x.1 != BigInt::zero() {
-        //         // Mult and Add only if the element cL[i] is not zero
-        //         let cL_i_fe: FE = ECScalar::from(&x.1);
-        //         let cL_i_fe_g_i: GE = x.0 * &cL_i_fe;
-        //         acc.add_point(&cL_i_fe_g_i.get_element())
-        //     } else {
-        //         // move on otherwise
-        //         acc
-        //     }
-        // });
-
         
         let a_G = (0..m)
             .map(|i| {
