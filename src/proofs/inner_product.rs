@@ -257,7 +257,7 @@ impl InnerProductArg {
         assert!(n.is_power_of_two());
 
         let lg_n = self.L.len();
-        assert!(lg_n < 64, "Not compatible for vector sizes greater than 2^64!");
+        assert!(lg_n <= 64, "Not compatible for vector sizes greater than 2^64!");
 
         let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
