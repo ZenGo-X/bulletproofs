@@ -257,6 +257,7 @@ impl InnerProductArg {
         assert!(n.is_power_of_two());
 
         let lg_n = self.L.len();
+        assert!(lg_n < 64, "Not compatible for vector sizes greater than 2^64!");
 
         let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
@@ -283,7 +284,7 @@ impl InnerProductArg {
         let mut s: Vec<BigInt> = Vec::with_capacity(n);
         s.push(allinv);
         for i in 1..n {
-            let lg_i = (32 - 1 - (i as u32).leading_zeros()) as usize;
+            let lg_i = (64 - 1 - ((i as u64).leading_zeros() as usize)) as usize;
             let k = 1 << lg_i;
             // The challenges are stored in "creation order" as [x_k,...,x_1],
             // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
