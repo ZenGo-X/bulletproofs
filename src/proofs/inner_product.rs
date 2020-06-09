@@ -79,7 +79,7 @@ impl InnerProductArg {
                 } else {
                     acc
                 }
-            });  
+            });
             let L = H_L.iter().zip(b_R.clone()).fold(aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let bRi: FE = ECScalar::from(&x.1);
@@ -95,7 +95,7 @@ impl InnerProductArg {
             //
             // R = <a_R * G_L> + <b_L * H_R> + c_R * ux
             let c_R_fe: FE = ECScalar::from(&c_R);
-            let ux_CR: GE = ux * &c_R_fe;       
+            let ux_CR: GE = ux * &c_R_fe;
             let aR_GL = G_L.iter().zip(a_R.clone()).fold(ux_CR, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let aRi: FE = ECScalar::from(&x.1);
@@ -104,7 +104,7 @@ impl InnerProductArg {
                 } else {
                     acc
                 }
-            });  
+            });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let bLi: FE = ECScalar::from(&x.1);
@@ -240,12 +240,11 @@ impl InnerProductArg {
     ///
     /// Returns Ok() if the given inner product satisfies the verification equations,
     /// else returns `InnerProductError`.
-    /// 
+    ///
     /// Uses a single multiexponentiation (multiscalar multiplication in additive notation)
-    /// check to verify an inner product proof. 
-    /// 
-    pub fn fast_verify(&self, g_vec: &[GE], hi_tag: &[GE], ux: &GE, P: &GE)
-    -> Result<(), Errors> {
+    /// check to verify an inner product proof.
+    ///
+    pub fn fast_verify(&self, g_vec: &[GE], hi_tag: &[GE], ux: &GE, P: &GE) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
@@ -257,7 +256,10 @@ impl InnerProductArg {
         assert!(n.is_power_of_two());
 
         let lg_n = self.L.len();
-        assert!(lg_n <= 64, "Not compatible for vector sizes greater than 2^64!");
+        assert!(
+            lg_n <= 64,
+            "Not compatible for vector sizes greater than 2^64!"
+        );
 
         let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
@@ -265,7 +267,6 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-
             let x = HSha256::create_hash_from_ge(&[&Li, &Ri, &ux]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
@@ -273,7 +274,7 @@ impl InnerProductArg {
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            
+
             x_sq_vec.push(x_sq_bn.clone());
             x_inv_sq_vec.push(x_inv_sq_bn.clone());
             minus_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_sq_bn, &order));
@@ -284,7 +285,8 @@ impl InnerProductArg {
         let mut s: Vec<BigInt> = Vec::with_capacity(n);
         s.push(allinv);
         for i in 1..n {
-            let lg_i = (std::mem::size_of_val(&n) * 8) - 1 - ((i as usize).leading_zeros() as usize);
+            let lg_i =
+                (std::mem::size_of_val(&n) * 8) - 1 - ((i as usize).leading_zeros() as usize);
             let k = 1 << lg_i;
             // The challenges are stored in "creation order" as [x_k,...,x_1],
             // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
@@ -292,21 +294,24 @@ impl InnerProductArg {
             s.push(s[i - k].clone() * x_lg_i_sq);
         }
 
-        let a_times_s: Vec<BigInt> = (0..n).map(|i| BigInt::mod_mul(&s[i], &self.a_tag, &order)).collect();
+        let a_times_s: Vec<BigInt> = (0..n)
+            .map(|i| BigInt::mod_mul(&s[i], &self.a_tag, &order))
+            .collect();
 
-        let b_div_s: Vec<BigInt> = (0..n).map(|i| {
-            let s_inv_i = BigInt::mod_inv(&s[i], &order);
-            BigInt::mod_mul(&s_inv_i, &self.b_tag, &order)
-        })
-        .collect();
+        let b_div_s: Vec<BigInt> = (0..n)
+            .map(|i| {
+                let s_inv_i = BigInt::mod_inv(&s[i], &order);
+                BigInt::mod_mul(&s_inv_i, &self.b_tag, &order)
+            })
+            .collect();
 
-        let mut scalars: Vec<BigInt> = Vec::with_capacity(2*n + 2*lg_n + 1);
+        let mut scalars: Vec<BigInt> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
         scalars.extend_from_slice(&a_times_s);
         scalars.extend_from_slice(&b_div_s);
         scalars.extend_from_slice(&minus_x_sq_vec);
         scalars.extend_from_slice(&minus_x_inv_sq_vec);
 
-        let mut points: Vec<GE> = Vec::with_capacity(2*n + 2*lg_n + 1);
+        let mut points: Vec<GE> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
         points.extend_from_slice(g_vec);
         points.extend_from_slice(hi_tag);
         points.extend_from_slice(&self.L);
@@ -317,10 +322,9 @@ impl InnerProductArg {
 
         let tot_len = points.len();
 
-        let expect_P = (0..tot_len).map(|i| {
-            points[i] * &ECScalar::from(&scalars[i])
-        }).
-        fold(ux_c, |acc, x| acc + x as GE);
+        let expect_P = (0..tot_len)
+            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
+            .fold(ux_c, |acc, x| acc + x as GE);
 
         if *P == expect_P {
             Ok(())
@@ -513,7 +517,6 @@ mod tests {
     }
 
     fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
-
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -539,7 +542,7 @@ mod tests {
         let Gx = generate_random_point(&Converter::to_vec(&hash));
 
         let c = super::inner_product(&a, &b);
-        
+
         let y: FE = ECScalar::new_random();
         let order = FE::q();
         let yi = (0..n)
@@ -559,7 +562,7 @@ mod tests {
         let c_fe: FE = ECScalar::from(&c);
 
         let ux_c: GE = &Gx * &c_fe;
-        
+
         let a_G = (0..m)
             .map(|i| {
                 let ai: FE = ECScalar::from(&a[i]);
@@ -610,7 +613,7 @@ mod tests {
     }
 
     #[test]
-    fn make_ipp_32_fast_verify(){
+    fn make_ipp_32_fast_verify() {
         test_helper_fast_verify(32);
     }
 
@@ -637,10 +640,9 @@ mod tests {
     fn make_ipp_1_fast_verify() {
         test_helper_fast_verify(1);
     }
-    
+
     #[test]
     fn make_ipp_non_power_2() {
-
         // Create random scalar vectors a, b with size non-power of 2
         let n: usize = 9;
         let mut a: Vec<_> = (0..n)
@@ -668,8 +670,6 @@ mod tests {
         // let mut padded_b = b.clone();
         b.extend_from_slice(&zero_append_vec);
 
-
         test_helper_non_power_2(n, _n, &a, &b);
     }
-
 }
