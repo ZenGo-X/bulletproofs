@@ -369,6 +369,126 @@ impl RangeProof {
             Err(RangeProofError)
         }
     }
+
+    pub fn fast_verify(
+        &self,
+        g_vec: &[GE],
+        h_vec: &[GE],
+        G: &GE,
+        H: &GE,
+        ped_com: &[GE],
+        bit_length: usize,
+    ) -> Result<(), Errors> {
+        let num_of_proofs = ped_com.len();
+        let nm = num_of_proofs * bit_length;
+
+        let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
+        let base_point: GE = ECPoint::generator();
+        let yG: GE = base_point * &y;
+        let z = HSha256::create_hash_from_ge(&[&yG]);
+        let z_bn = z.to_big_int();
+        let order = FE::q();
+        let z_minus = BigInt::mod_sub(&order, &z.to_big_int(), &order);
+        let z_minus_fe: FE = ECScalar::from(&z_minus);
+        let z_squared = BigInt::mod_pow(&z.to_big_int(), &BigInt::from(2), &order);
+        // delta(x,y):
+        let one_bn = BigInt::one();
+        let one_fe: FE = ECScalar::from(&one_bn);
+        let yi = iterate(one_fe.clone(), |i| i.clone() * &y)
+            .take(nm)
+            .collect::<Vec<FE>>();
+
+        let scalar_mul_yn = yi.iter().fold(FE::zero(), |acc, x| acc + x);
+        let scalar_mul_yn = scalar_mul_yn.to_big_int();
+        let two = BigInt::from(2);
+
+        let two_fe: FE = ECScalar::from(&two);
+        let vec_2n = iterate(one_fe.clone(), |i| i.clone() * &two_fe)
+            .take(bit_length)
+            .collect::<Vec<FE>>();
+
+        let scalar_mul_2n = vec_2n.iter().fold(FE::zero(), |acc, x| acc + x);
+        let scalar_mul_2n = scalar_mul_2n.to_big_int();
+
+        let z_cubed_scalar_mul_2n = (0..num_of_proofs)
+            .map(|i| {
+                let j = BigInt::mod_add(&BigInt::from(3), &BigInt::from(i as u32), &order);
+                let z_j = BigInt::mod_pow(&z_bn, &j, &order);
+                BigInt::mod_mul(&z_j, &scalar_mul_2n, &order)
+            })
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+
+        let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
+        let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
+        let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
+
+        let yi_inv = (0..nm).map(|i| yi[i].invert()).collect::<Vec<FE>>();
+
+        let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+
+        let fs_challenge = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
+        let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
+
+        // eq 65:
+        let Gtx = G * &self.tx;
+        let Htaux = H * &self.tau_x;
+        let left_side = Gtx + Htaux;
+        let delta_fe: FE = ECScalar::from(&delta);
+        let Gdelta = G * &delta_fe;
+        let Tx = &self.T1 * &fs_challenge;
+        let Tx_sq = &self.T2 * &fs_challenge_square;
+
+        let mut vec_ped_zm = (0..num_of_proofs)
+            .map(|i| {
+                let z_2_m = BigInt::mod_pow(&z_bn, &BigInt::from((2 + i) as u32), &order);
+                let z_2_m_fe: FE = ECScalar::from(&z_2_m);
+                &ped_com[i] * &z_2_m_fe
+            })
+            .collect::<Vec<GE>>();
+        let vec_ped_zm_1 = vec_ped_zm.remove(0);
+        let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x);
+        let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
+
+        let challenge_x = HSha256::create_hash(&[
+            &self.tau_x.to_big_int(),
+            &self.miu.to_big_int(),
+            &self.tx.to_big_int(),
+        ]);
+        let challenge_x: FE = ECScalar::from(&challenge_x);
+        let Gx = G * &challenge_x;
+        // P' = u^{xc}
+
+        let P = &Gx * &self.tx;
+        let minus_miu = BigInt::mod_sub(&FE::q(), &self.miu.to_big_int(), &FE::q());
+        let minus_miu_fe: FE = ECScalar::from(&minus_miu);
+        let Hmiu = H * &minus_miu_fe;
+        let Sx = &self.S * &fs_challenge;
+        let P = Hmiu + P + self.A.clone() + Sx;
+
+        let P1 = (0..nm)
+            .map(|i| {
+                let z_yn = BigInt::mod_mul(&z_bn, &yi[i].to_big_int(), &order);
+                let j = i / bit_length;
+                let k = i % bit_length;
+                let z_j = BigInt::mod_pow(&z_bn, &BigInt::from((2 + j) as u32), &order);
+                let z_j_2_n = BigInt::mod_mul(&z_j, &vec_2n[k].to_big_int(), &order);
+                // let z_sq_2n = BigInt::mod_mul(&z_squared, &vec_2n[i], &order);
+                let zyn_zsq2n = BigInt::mod_add(&z_yn, &z_j_2_n, &order);
+                let zyn_zsq2n_fe: FE = ECScalar::from(&zyn_zsq2n);
+                &hi_tag[i] * &zyn_zsq2n_fe
+            })
+            .fold(P, |acc, x| acc + x);
+
+        let P = (0..nm)
+            .map(|i| &g_vec[i] * &z_minus_fe)
+            .fold(P1, |acc, x| acc + x);
+        let verify = self.inner_product_proof.fast_verify(g_vec, &hi_tag, &Gx, &P);
+        if verify.is_ok() && left_side == right_side {
+            Ok(())
+        } else {
+            Err(RangeProofError)
+        }
+    }
 }
 
 pub fn generate_random_point(bytes: &[u8]) -> GE {
