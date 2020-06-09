@@ -284,7 +284,7 @@ impl InnerProductArg {
         let mut s: Vec<BigInt> = Vec::with_capacity(n);
         s.push(allinv);
         for i in 1..n {
-            let lg_i = (64 - 1 - ((i as u64).leading_zeros() as usize)) as usize;
+            let lg_i = (std::mem::size_of_val(&n) * 8) - 1 - ((i as usize).leading_zeros() as usize);
             let k = 1 << lg_i;
             // The challenges are stored in "creation order" as [x_k,...,x_1],
             // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
