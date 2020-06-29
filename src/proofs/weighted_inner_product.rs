@@ -694,6 +694,82 @@ mod tests {
         assert!(verifier.is_ok())
     }
 
+    fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
+        let KZen: &[u8] = &[75, 90, 101, 110];
+        let kzen_label = BigInt::from(KZen);
+
+        let g_vec = (0..n)
+            .map(|i| {
+                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
+                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                generate_random_point(&Converter::to_vec(&hash_i))
+            })
+            .collect::<Vec<GE>>();
+
+        // can run in parallel to g_vec:
+        let h_vec = (0..n)
+            .map(|i| {
+                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
+                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                generate_random_point(&Converter::to_vec(&hash_j))
+            })
+            .collect::<Vec<GE>>();
+
+        // generate g, h 
+        let label = BigInt::from(2);
+        let hash = HSha512::create_hash(&[&label]);
+        let g = generate_random_point(&Converter::to_vec(&hash));
+        let label = BigInt::from(3);
+        let hash = HSha512::create_hash(&[&label]);
+        let h = generate_random_point(&Converter::to_vec(&hash));
+
+        let y_scalar: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        let c = super::weighted_inner_product(&a, &b, y_scalar);
+
+        let alpha_fe: FE = ECScalar::new_random();
+        let alpha = alpha_fe.to_big_int();
+
+        let y: FE = ECScalar::new_random();
+        let order = FE::q();
+        let yi = (0..n)
+            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .collect::<Vec<BigInt>>();
+
+        let yi_inv = (0..n)
+            .map(|i| {
+                let yi_fe: FE = ECScalar::from(&yi[i]);
+                yi_fe.invert()
+            })
+            .collect::<Vec<FE>>();
+
+        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+
+        // R = <a * G> + <b_L * H_R> + c * g + alpha*h
+        let c_fe: FE = ECScalar::from(&c);
+        let g_c: GE = &g * &c_fe;
+        let h_alpha: GE = &h * &alpha_fe;
+        let gc_halpha = g_c + h_alpha;
+        let a_G = (0..m)
+            .map(|i| {
+                let ai: FE = ECScalar::from(&a[i]);
+                &g_vec[i] * &ai
+            })
+            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+        let P = (0..m)
+            .map(|i| {
+                let bi: FE = ECScalar::from(&b[i]);
+                &hi_tag[i] * &bi
+            })
+            .fold(a_G, |acc, x: GE| acc + x as GE);
+
+        let L_vec = Vec::with_capacity(n);
+        let R_vec = Vec::with_capacity(n);
+        let ipp = WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, L_vec, R_vec);
+        let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P);
+        assert!(verifier.is_ok())
+    }
+
+
     #[test]
     fn test_wip(){
         let a: Vec<BigInt> = vec![BigInt::from(3), BigInt::from(2), BigInt::from(1), BigInt::from(0)];
@@ -764,6 +840,35 @@ mod tests {
     #[test]
     fn make_wip_1_fast_verify() {
         test_helper_fast_verify(1);
+    }
+
+    #[test]
+    fn make_wip_non_power_2() {
+        // Create random scalar vectors a, b with size non-power of 2
+        let n: usize = 9;
+        let mut a: Vec<_> = (0..n)
+            .map(|_| {
+                let rand: FE = ECScalar::new_random();
+                rand.to_big_int()
+            })
+            .collect();
+
+        let mut b: Vec<_> = (0..n)
+            .map(|_| {
+                let rand: FE = ECScalar::new_random();
+                rand.to_big_int()
+            })
+            .collect();
+
+        // next power of 2
+        let _n: usize = n.next_power_of_two();
+        let zero_append_vec = vec![BigInt::zero(); _n - n];
+
+        // zero-appending at the end of a, b
+        a.extend_from_slice(&zero_append_vec);
+        b.extend_from_slice(&zero_append_vec);
+
+        test_helper_non_power_2(n, _n, &a, &b);
     }
     
 }
