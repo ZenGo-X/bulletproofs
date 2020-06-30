@@ -482,7 +482,9 @@ impl RangeProof {
         let P = (0..nm)
             .map(|i| &g_vec[i] * &z_minus_fe)
             .fold(P1, |acc, x| acc + x);
-        let verify = self.inner_product_proof.fast_verify(g_vec, &hi_tag, &Gx, &P);
+        let verify = self
+            .inner_product_proof
+            .fast_verify(g_vec, &hi_tag, &Gx, &P);
         if verify.is_ok() && left_side == right_side {
             Ok(())
         } else {
