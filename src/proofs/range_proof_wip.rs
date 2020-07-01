@@ -37,11 +37,11 @@ use Errors::{self, RangeProofError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StatementRP {
-    g_vec: Vec<GE>,
-    h_vec: Vec<GE>,
-    G: GE,
-    H: GE,
-    bit_length: usize,
+    pub g_vec: Vec<GE>,
+    pub h_vec: Vec<GE>,
+    pub G: GE,
+    pub H: GE,
+    pub bit_length: usize,
 }
 
 impl StatementRP {
@@ -385,7 +385,7 @@ impl RangeProofWIP {
             .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
             .fold(sum_com.clone(), |acc, x| acc + x as GE);
         
-        let verify = self.weighted_inner_product_proof.verify(&g_vec, &h_vec, &G, &H, &A_hat, &y_bn);
+        let verify = self.weighted_inner_product_proof.fast_verify(&g_vec, &h_vec, &G, &H, &A_hat, &y_bn);
         if verify.is_ok() {
             Ok(())
         } else {
