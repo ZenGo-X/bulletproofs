@@ -15,7 +15,7 @@ version 3 of the License, or (at your option) any later version.
 @license GPL-3.0+ <https://github.com/KZen-networks/bulletproof/blob/master/LICENSE>
 */
 
-// based on the paper: https://eprint.iacr.org/2017/1066.pdf
+// based on the paper: https://eprint.iacr.org/2020/735.pdf
 use curv::arithmetic::traits::Modulo;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
