@@ -46,6 +46,7 @@ impl WeightedInnerProdArg {
         a: &[BigInt],
         b: &[BigInt],
         alpha: &BigInt,
+        y: &BigInt,
         mut L_vec: Vec<GE>,
         mut R_vec: Vec<GE>,
     ) -> WeightedInnerProdArg {
@@ -60,7 +61,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // Generate scalar `y` uniformly from the scalar field
-        let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        // let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let powers_y = scalar_powers(y.clone(), n);
         let y_inv = BigInt::mod_inv(&y, &order);
         let powers_yinv = scalar_powers(y_inv, n);
@@ -192,7 +193,7 @@ impl WeightedInnerProdArg {
             L_vec.push(L);
             R_vec.push(R);
             return WeightedInnerProdArg::prove(
-                &G_new, &H_new, &g, &h, &P, &a_new, &b_new, &alpha_new, L_vec, R_vec,
+                &G_new, &H_new, &g, &h, &P, &a_new, &b_new, &alpha_new, &y, L_vec, R_vec,
             );
         } else {
             let r: FE = ECScalar::new_random();
@@ -259,6 +260,7 @@ impl WeightedInnerProdArg {
         g: &GE,
         h: &GE,
         P: &GE,
+        y: &BigInt,
     ) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
@@ -271,7 +273,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // Generate scalar `y` uniformly from the scalar field
-        let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        // let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let y_inv = BigInt::mod_inv(&y, &order);
         let powers_yinv = scalar_powers(y_inv, n);
 
@@ -323,7 +325,7 @@ impl WeightedInnerProdArg {
                 s_prime: self.s_prime.clone(),
                 delta_prime: self.delta_prime.clone(),
             };
-            return ip.verify(&G_new, &H_new, g, h, &P_tag);
+            return ip.verify(&G_new, &H_new, g, h, &P_tag, &y);
         }
 
         // compute challenge e
@@ -370,6 +372,7 @@ impl WeightedInnerProdArg {
         g: &GE,
         h: &GE,
         P: &GE,
+        y: &BigInt,
     ) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
@@ -382,7 +385,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // Generate scalar `y` uniformly from the scalar field
-        let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        // let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let y_inv = BigInt::mod_inv(&y, &order);
         let powers_yinv = scalar_powers(y_inv, n);
 
@@ -580,7 +583,7 @@ mod tests {
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar);
+        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
         let alpha_fe: FE = ECScalar::new_random();
         let alpha = alpha_fe.to_big_int();
@@ -621,8 +624,8 @@ mod tests {
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
         let ipp =
-            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, L_vec, R_vec);
-        let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P);
+            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec);
+        let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
     }
 
@@ -670,7 +673,7 @@ mod tests {
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar);
+        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
         let alpha_fe: FE = ECScalar::new_random();
         let alpha = alpha_fe.to_big_int();
@@ -711,8 +714,8 @@ mod tests {
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
         let ipp =
-            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, L_vec, R_vec);
-        let verifier = ipp.fast_verify(&g_vec, &hi_tag, &g, &h, &P);
+            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec);
+        let verifier = ipp.fast_verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
     }
 
@@ -747,7 +750,7 @@ mod tests {
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar);
+        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
         let alpha_fe: FE = ECScalar::new_random();
         let alpha = alpha_fe.to_big_int();
@@ -788,8 +791,8 @@ mod tests {
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
         let ipp =
-            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, L_vec, R_vec);
-        let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P);
+            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec);
+        let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
     }
 

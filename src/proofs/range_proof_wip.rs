@@ -218,7 +218,7 @@ impl RangeProofWIP {
         let L_vec = Vec::with_capacity(nm);
         let R_vec = Vec::with_capacity(nm);
         let weighted_inner_product_proof = 
-            WeightedInnerProdArg::prove(&g_vec, &h_vec, G, H, &A_hat, &aL_hat, &aR_hat, &alpha_hat, L_vec, R_vec);
+            WeightedInnerProdArg::prove(&g_vec, &h_vec, G, H, &A_hat, &aL_hat, &aR_hat, &alpha_hat, &y_bn, L_vec, R_vec);
 
         return RangeProofWIP {
             A,
@@ -343,7 +343,7 @@ impl RangeProofWIP {
 
         // println!("A_hat: {:?}", A_hat);
         
-        let verify = self.weighted_inner_product_proof.verify(&g_vec, &h_vec, &G, &H, &A_hat);
+        let verify = self.weighted_inner_product_proof.verify(&g_vec, &h_vec, &G, &H, &A_hat, &y_bn);
         if verify.is_ok() {
             Ok(())
         } else {
