@@ -16,6 +16,11 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2020/735.pdf
+//
+// Bulletproofs (https://eprint.iacr.org/2017/1066) uses the inner product argument.
+// Bulletproofs+ (https://eprint.iacr.org/2020/735.pdf) uses the weighted inner product argument
+// which reduces the overall prover communication by ~15%
+// 
 use curv::arithmetic::traits::{Converter, Modulo};
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
@@ -97,9 +102,8 @@ impl RangeProofWIP {
             }
         });
 
-        // let y = HSha256::create_hash_from_ge(&[&A]);
-        let y_bn: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        // let y_bn = y.to_big_int();
+        let y = HSha256::create_hash_from_ge(&[&A]);
+        let y_bn = y.to_big_int();
         let y = ECScalar::from(&y_bn);
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
@@ -198,8 +202,6 @@ impl RangeProofWIP {
             .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
             .fold(A.clone(), |acc, x| acc + x as GE);
 
-        // println!("A_hat: {:?}", A_hat);
-
         // compute aL_hat, aR_hat, alpha_hat
         let aL_hat = (0..nm)
             .map(|i| {
@@ -246,9 +248,8 @@ impl RangeProofWIP {
         let one = BigInt::from(1);
         let order = FE::q();
 
-        // let y = HSha256::create_hash_from_ge(&[&A]);
-        let y_bn: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        // let y_bn = y.to_big_int();
+        let y = HSha256::create_hash_from_ge(&[&self.A]);
+        let y_bn = y.to_big_int();
         let y = ECScalar::from(&y_bn);
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
@@ -340,8 +341,6 @@ impl RangeProofWIP {
         let A_hat = (0..(2*nm + 1))
             .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
             .fold(sum_com.clone(), |acc, x| acc + x as GE);
-
-        // println!("A_hat: {:?}", A_hat);
         
         let verify = self.weighted_inner_product_proof.verify(&g_vec, &h_vec, &G, &H, &A_hat, &y_bn);
         if verify.is_ok() {

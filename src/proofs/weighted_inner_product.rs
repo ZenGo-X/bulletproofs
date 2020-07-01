@@ -16,6 +16,11 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2020/735.pdf
+//
+// Bulletproofs (https://eprint.iacr.org/2017/1066) uses the inner product argument.
+// Bulletproofs+ (https://eprint.iacr.org/2020/735.pdf) uses the weighted inner product argument
+// which reduces the overall prover communication by ~15%
+// 
 use curv::arithmetic::traits::Modulo;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
@@ -54,14 +59,12 @@ impl WeightedInnerProdArg {
         let order = FE::q();
 
         // All of the input vectors must have the same length.
-        assert_eq!(G.len(), n);
         assert_eq!(H.len(), n);
         assert_eq!(a.len(), n);
         assert_eq!(b.len(), n);
         assert!(n.is_power_of_two());
 
-        // Generate scalar `y` uniformly from the scalar field
-        // let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        // compute powers of y
         let powers_y = scalar_powers(y.clone(), n);
         let y_inv = BigInt::mod_inv(&y, &order);
         let powers_yinv = scalar_powers(y_inv, n);
@@ -70,6 +73,9 @@ impl WeightedInnerProdArg {
         //   let mut R_vec = Vec::with_capacity(n);
         if n != 1 {
             let n = n / 2;
+
+            // we use notation a_L for the left half of vector a and so on
+            // Note: Bulletproofs+ paper uses (a_1, a_2) for (a_L, a_R) 
             let (a_L, a_R) = a.split_at(n);
             let (b_L, b_R) = b.split_at(n);
             let (G_L, G_R) = G.split_at(n);
@@ -141,59 +147,61 @@ impl WeightedInnerProdArg {
                 }
             });
 
+            // the challenges in pre-final rounds are used as [x_1, x_2, ...]
+            // to avoid confusion with the challenge `e` in last round
             let x = HSha256::create_hash_from_ge(&[&L, &R, &g, &h]);
             let x_bn = x.to_big_int();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_sq_inv_bn = BigInt::mod_inv(&x_sq_bn, &order);
             let x_inv_fe = x.invert();
 
-            let a_new = (0..n)
+            let a_hat = (0..n)
                 .map(|i| {
                     let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
                     let aR_minusx = BigInt::mod_mul(&yn_aR[i], &x_inv_fe.to_big_int(), &order);
                     BigInt::mod_add(&aLx, &aR_minusx, &order)
                 })
                 .collect::<Vec<BigInt>>();
-            //   a = &mut a_new[..];
+            //   a = &mut a_hat[..];
 
-            let b_new = (0..n)
+            let b_hat = (0..n)
                 .map(|i| {
                     let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
                     let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_big_int(), &order);
                     BigInt::mod_add(&bRx, &bL_minusx, &order)
                 })
                 .collect::<Vec<BigInt>>();
-            //    b = &mut b_new[..];
+            //    b = &mut b_hat[..];
 
             let x2_dL = BigInt::mod_mul(&x_sq_bn, &d_L_fe.to_big_int(), &order);
             let xinv2_dR = BigInt::mod_mul(&x_sq_inv_bn, &d_R_fe.to_big_int(), &order);
             let x2_dL_xinv2_dR = BigInt::mod_add(&x2_dL, &xinv2_dR, &order);
-            let alpha_new = BigInt::mod_add(&alpha, &x2_dL_xinv2_dR, &order);
+            let alpha_hat = BigInt::mod_add(&alpha, &x2_dL_xinv2_dR, &order);
 
             let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
             let x_yinv_fe = ECScalar::from(&x_yinv);
-            let G_new = (0..n)
+            let G_hat = (0..n)
                 .map(|i| {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
                     let GRx_yinv = &G_R[i] * &x_yinv_fe;
                     GRx_yinv + GLx_inv
                 })
                 .collect::<Vec<GE>>();
-            //   G = &mut G_new[..];
+            //   G = &mut G_hat[..];
 
-            let H_new = (0..n)
+            let H_hat = (0..n)
                 .map(|i| {
                     let HLx = &H_L[i] * &x;
                     let HRx_inv = &H_R[i] * &x_inv_fe;
                     HLx + HRx_inv
                 })
                 .collect::<Vec<GE>>();
-            //    H = &mut H_new[..];
+            //    H = &mut H_hat[..];
 
             L_vec.push(L);
             R_vec.push(R);
             return WeightedInnerProdArg::prove(
-                &G_new, &H_new, &g, &h, &P, &a_new, &b_new, &alpha_new, &y, L_vec, R_vec,
+                &G_hat, &H_hat, &g, &h, &P, &a_hat, &b_hat, &alpha_hat, &y, L_vec, R_vec,
             );
         } else {
             let r: FE = ECScalar::new_random();
@@ -268,12 +276,10 @@ impl WeightedInnerProdArg {
         let order = FE::q();
 
         // All of the input vectors must have the same length.
-        assert_eq!(G.len(), n);
         assert_eq!(H.len(), n);
         assert!(n.is_power_of_two());
 
-        // Generate scalar `y` uniformly from the scalar field
-        // let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        // compute powers of y
         let y_inv = BigInt::mod_inv(&y, &order);
         let powers_yinv = scalar_powers(y_inv, n);
 
@@ -294,23 +300,23 @@ impl WeightedInnerProdArg {
 
             let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
             let x_yinv_fe = ECScalar::from(&x_yinv);
-            let G_new = (0..n)
+            let G_hat = (0..n)
                 .map(|i| {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
                     let GRx_yinv = &G_R[i] * &x_yinv_fe;
                     GRx_yinv + GLx_inv
                 })
                 .collect::<Vec<GE>>();
-            //   G = &mut G_new[..];
+            //   G = &mut G_hat[..];
 
-            let H_new = (0..n)
+            let H_hat = (0..n)
                 .map(|i| {
                     let HLx = &H_L[i] * &x;
                     let HRx_inv = &H_R[i] * &x_inv_fe;
                     HLx + HRx_inv
                 })
                 .collect::<Vec<GE>>();
-            //    H = &mut H_new[..];
+            //    H = &mut H_hat[..];
 
             let Lx_sq = &self.L[0] * &x_sq_fe;
             let Rx_sq_inv = &self.R[0] * &x_inv_sq_fe;
@@ -325,7 +331,7 @@ impl WeightedInnerProdArg {
                 s_prime: self.s_prime.clone(),
                 delta_prime: self.delta_prime.clone(),
             };
-            return ip.verify(&G_new, &H_new, g, h, &P_tag, &y);
+            return ip.verify(&G_hat, &H_hat, g, h, &P_tag, &y);
         }
 
         // compute challenge e
@@ -380,12 +386,10 @@ impl WeightedInnerProdArg {
         let order = FE::q();
 
         // All of the input vectors must have the same length.
-        assert_eq!(G.len(), n);
         assert_eq!(H.len(), n);
         assert!(n.is_power_of_two());
 
-        // Generate scalar `y` uniformly from the scalar field
-        // let y: BigInt = HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        // compute powers of y
         let y_inv = BigInt::mod_inv(&y, &order);
         let powers_yinv = scalar_powers(y_inv, n);
 
