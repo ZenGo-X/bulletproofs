@@ -16,6 +16,7 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2020/735.pdf
+// This is an implementation of figure 3 - aggregated range proof protocol from the above paper.
 //
 // Bulletproofs (https://eprint.iacr.org/2017/1066) uses the inner product argument.
 // Bulletproofs+ (https://eprint.iacr.org/2020/735.pdf) uses the weighted inner product argument
@@ -23,14 +24,66 @@ version 3 of the License, or (at your option) any later version.
 // 
 use curv::arithmetic::traits::{Converter, Modulo};
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
+use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
 use curv::{FE, GE};
 use itertools::iterate;
+use proofs::range_proof::generate_random_point;
 use proofs::weighted_inner_product::WeightedInnerProdArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct StatementRP {
+    g_vec: Vec<GE>,
+    h_vec: Vec<GE>,
+    G: GE,
+    H: GE,
+}
+
+impl StatementRP {
+    pub fn generate_bases(
+        init_seed: &BigInt,
+        num_of_proofs: usize,
+        bit_length: usize,
+    ) -> StatementRP {
+
+        let n = bit_length;
+        let m = num_of_proofs;
+        let nm = n * m;
+
+        let G: GE = ECPoint::generator();
+        let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &FE::q());
+        let hash = HSha512::create_hash(&[&label]);
+        let H = generate_random_point(&Converter::to_vec(&hash));
+
+        let g_vec = (0..nm)
+            .map(|i| {
+                let kzen_label_i = BigInt::from(i as u32) + init_seed;
+                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                generate_random_point(&Converter::to_vec(&hash_i))
+            })
+            .collect::<Vec<GE>>();
+
+        // can run in parallel to g_vec:
+        let h_vec = (0..nm)
+            .map(|i| {
+                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + init_seed;
+                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                generate_random_point(&Converter::to_vec(&hash_j))
+            })
+            .collect::<Vec<GE>>();
+        
+        return StatementRP{
+            g_vec,
+            h_vec,
+            G,
+            H,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RangeProofWIP {
