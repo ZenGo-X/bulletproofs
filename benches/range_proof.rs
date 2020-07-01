@@ -133,7 +133,9 @@ mod bench {
 
             let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
 
-            b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
+            b.iter(|| {
+                RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n)
+            })
         });
     }
 
@@ -278,6 +280,7 @@ mod bench {
     name = fast_verify_rp;
     config = Criterion::default().sample_size(10);
     targets =fast_verify_range_proof_8}
+
 }
 //fn main() {}
 criterion_main!(
