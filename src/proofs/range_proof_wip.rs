@@ -41,6 +41,7 @@ pub struct StatementRP {
     h_vec: Vec<GE>,
     G: GE,
     H: GE,
+    bit_length: usize,
 }
 
 impl StatementRP {
@@ -54,6 +55,7 @@ impl StatementRP {
         let m = num_of_proofs;
         let nm = n * m;
 
+        // G,H - points for pederson commitment: com  = vG + rH
         let G: GE = ECPoint::generator();
         let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &FE::q());
         let hash = HSha512::create_hash(&[&label]);
@@ -81,6 +83,7 @@ impl StatementRP {
             h_vec,
             G,
             H,
+            bit_length,
         }
     }
 }
@@ -93,29 +96,29 @@ pub struct RangeProofWIP {
 
 impl RangeProofWIP {
     pub fn prove(
-        g_vec: &[GE],
-        h_vec: &[GE],
-        G: &GE,
-        H: &GE,
+        stmt: StatementRP,
         mut secret: Vec<FE>,
         blinding: &[FE],
-        bit_length: usize,
     ) -> RangeProofWIP {
 
         let num_of_proofs = secret.len();
+        let bit_length = stmt.bit_length;
         //num of proofs times bit length
         let nm = num_of_proofs * bit_length;
         
-        let g_vec = g_vec.to_vec();
-        let h_vec = h_vec.to_vec();
-        let n = g_vec.len();
+        let g_vec = stmt.g_vec.to_vec();
+        let h_vec = stmt.h_vec.to_vec();
+        let G = stmt.G;
+        let H = stmt.H;
+
+        let N = g_vec.len();
         let two = BigInt::from(2);
         let one = BigInt::from(1);
         let order = FE::q();
 
         // All of the input vectors must have the same length.
-        assert_eq!(h_vec.len(), n);
-        assert!(n.is_power_of_two());
+        assert_eq!(h_vec.len(), N);
+        assert!(N.is_power_of_two());
 
         //concat all secrets:
         secret.reverse();
@@ -245,7 +248,7 @@ impl RangeProofWIP {
         let mut A_hat_bases: Vec<GE> = Vec::with_capacity(2*nm + 2);
         A_hat_bases.extend_from_slice(&g_vec);
         A_hat_bases.extend_from_slice(&h_vec);
-        A_hat_bases.extend_from_slice(&[*G, *H]);
+        A_hat_bases.extend_from_slice(&[G, H]);
 
         let A_hat = (0..(2*nm + 2))
             .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
@@ -269,7 +272,7 @@ impl RangeProofWIP {
         let L_vec = Vec::with_capacity(nm);
         let R_vec = Vec::with_capacity(nm);
         let weighted_inner_product_proof = 
-            WeightedInnerProdArg::prove(&g_vec, &h_vec, G, H, &A_hat, &aL_hat, &aR_hat, &alpha_hat, &y_bn, L_vec, R_vec);
+            WeightedInnerProdArg::prove(&g_vec, &h_vec, &G, &H, &A_hat, &aL_hat, &aR_hat, &alpha_hat, &y_bn, L_vec, R_vec);
 
         return RangeProofWIP {
             A,
@@ -279,19 +282,18 @@ impl RangeProofWIP {
 
     pub fn verify(
         &self,
-        g_vec: &[GE],
-        h_vec: &[GE],
-        G: &GE,
-        H: &GE,
+        stmt: StatementRP,
         ped_com: &[GE],
-        bit_length: usize,
     ) -> Result<(), Errors> {
 
+        let bit_length = stmt.bit_length;
         let num_of_proofs = ped_com.len();
         let nm = num_of_proofs * bit_length;
 
-        let g_vec = g_vec.to_vec();
-        let h_vec = h_vec.to_vec();
+        let g_vec = stmt.g_vec.to_vec();
+        let h_vec = stmt.h_vec.to_vec();
+        let G = stmt.G;
+        let H = stmt.H;
 
         let two = BigInt::from(2);
         let one = BigInt::from(1);
@@ -377,7 +379,7 @@ impl RangeProofWIP {
         let mut A_hat_bases: Vec<GE> = Vec::with_capacity(2*nm + 2);
         A_hat_bases.extend_from_slice(&g_vec);
         A_hat_bases.extend_from_slice(&h_vec);
-        A_hat_bases.extend_from_slice(&[*G]);
+        A_hat_bases.extend_from_slice(&[G]);
 
         let A_hat = (0..(2*nm + 1))
             .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
@@ -394,46 +396,55 @@ impl RangeProofWIP {
 
 #[cfg(test)]
 mod tests {
-    use curv::arithmetic::traits::{Converter, Samplable};
-    use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
-    use curv::cryptographic_primitives::hashing::traits::*;
+    use curv::arithmetic::traits::{Samplable};
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
     use curv::{FE, GE};
-    use proofs::range_proof::generate_random_point;
-    use proofs::range_proof_wip::RangeProofWIP;
+    use proofs::range_proof_wip::{RangeProofWIP, StatementRP};
+
+    pub fn test_helper(
+        seed: &BigInt, 
+        n: usize, 
+        m: usize) {
+            // generate stmt
+            let stmt = StatementRP::generate_bases(&seed, m, n);
+    
+            // generate witness
+            let G = stmt.G;
+            let H = stmt.H;
+            let range = BigInt::from(2).pow(n as u32);
+            let v_vec = (0..m)
+                .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+                .collect::<Vec<FE>>();
+    
+            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+    
+            let ped_com_vec = (0..m)
+                .map(|i| {
+                    let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                    ped_com
+                })
+                .collect::<Vec<GE>>();
+    
+            // simulate range proof
+            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
+            let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
+            assert!(result.is_ok());  
+    }
 
     #[test]
     pub fn test_batch_4_wip_range_proof_32() {
         let n = 32;
         // num of proofs
         let m = 4;
-        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        let G: GE = ECPoint::generator();
-        let label = BigInt::from(1);
-        let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let stmt = StatementRP::generate_bases(&kzen_label, m, n);
 
-        let g_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
-            })
-            .collect::<Vec<GE>>();
-
-        // can run in parallel to g_vec:
-        let h_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
-            })
-            .collect::<Vec<GE>>();
-
+        // generate witness
+        let G = stmt.G;
+        let H = stmt.H;
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
@@ -448,8 +459,8 @@ mod tests {
             })
             .collect::<Vec<GE>>();
 
-        let range_proof_wip = RangeProofWIP::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
-        let result = RangeProofWIP::verify(&range_proof_wip, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
+        let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
+        let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
         assert!(result.is_ok());
     }
 
@@ -459,32 +470,14 @@ mod tests {
         let n = 32;
         // num of proofs
         let m = 4;
-        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        let G: GE = ECPoint::generator();
-        let label = BigInt::from(1);
-        let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let stmt = StatementRP::generate_bases(&kzen_label, m, n);
 
-        let g_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
-            })
-            .collect::<Vec<GE>>();
-
-        // can run in parallel to g_vec:
-        let h_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
-            })
-            .collect::<Vec<GE>>();
-
+        // generate witness
+        let G = stmt.G;
+        let H = stmt.H;
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
@@ -502,111 +495,22 @@ mod tests {
             })
             .collect::<Vec<GE>>();
 
-        let range_proof_wip = RangeProofWIP::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
-        let result = RangeProofWIP::verify(&range_proof_wip, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
+        let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
+        let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
         assert!(result.is_ok());
     }
 
     #[test]
     pub fn test_batch_2_wip_range_proof_16() {
-        let n = 16;
-        // num of proofs
-        let m = 2;
-        let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
-
-        let G: GE = ECPoint::generator();
-        let label = BigInt::from(1);
-        let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
-
-        let g_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
-            })
-            .collect::<Vec<GE>>();
-
-        // can run in parallel to g_vec:
-        let h_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
-            })
-            .collect::<Vec<GE>>();
-
-        let range = BigInt::from(2).pow(n as u32);
-        let v_vec = (0..m)
-            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<FE>>();
-
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
-
-        let ped_com_vec = (0..m)
-            .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
-                ped_com
-            })
-            .collect::<Vec<GE>>();
-
-        let range_proof_wip = RangeProofWIP::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
-        let result = RangeProofWIP::verify(&range_proof_wip, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
-        assert!(result.is_ok());
+        test_helper(&kzen_label, 16, 2);
     }
 
     #[test]
     pub fn test_batch_1_wip_range_proof_8() {
-        // bit range
-        let n = 8;
-        // batch size
-        let m = 1;
-        let nm = n * m;
-        // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
-
-        // G,H - points for pederson commitment: com  = vG + rH
-        let G: GE = ECPoint::generator();
-        let label = BigInt::from(1);
-        let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
-
-        let g_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
-            })
-            .collect::<Vec<GE>>();
-
-        // can run in parallel to g_vec:
-        let h_vec = (0..nm)
-            .map(|i| {
-                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
-            })
-            .collect::<Vec<GE>>();
-
-        let range = BigInt::from(2).pow(n as u32);
-        let v_vec = (0..m)
-            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<FE>>();
-
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
-
-        let ped_com_vec = (0..m)
-            .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
-                ped_com
-            })
-            .collect::<Vec<GE>>();
-
-        let range_proof_wip = RangeProofWIP::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
-        let result = RangeProofWIP::verify(&range_proof_wip, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
-        assert!(result.is_ok());
+        test_helper(&kzen_label, 8, 1);
     }
 }
