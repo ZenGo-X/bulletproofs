@@ -234,7 +234,7 @@ impl WeightedInnerProdArg {
 
             // compute challenge e
             // let lg_n = L_vec.len();
-            let e = HSha256::create_hash_from_ge(&[&g, &h]);
+            let e = HSha256::create_hash_from_ge(&[&A, &B, &g, &h]);
             let e_bn = e.to_big_int();
             let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
 
@@ -335,7 +335,7 @@ impl WeightedInnerProdArg {
         }
 
         // compute challenge e
-        let e = HSha256::create_hash_from_ge(&[&g, &h]);
+        let e = HSha256::create_hash_from_ge(&[&self.a_tag, &self.b_tag, &g, &h]);
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
         let e_sq_fe: FE = ECScalar::from(&e_sq_bn);
@@ -400,7 +400,7 @@ impl WeightedInnerProdArg {
         );
 
         // compute challenge e
-        let e = HSha256::create_hash_from_ge(&[&g, &h]);
+        let e = HSha256::create_hash_from_ge(&[&self.a_tag, &self.b_tag, &g, &h]);
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
 
