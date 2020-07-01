@@ -27,6 +27,7 @@ use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
 use curv::{FE, GE};
+use itertools::iterate;
 
 use Errors::{self, WeightedInnerProdError};
 
@@ -65,9 +66,13 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let powers_y = scalar_powers(y.clone(), n);
         let y_inv = BigInt::mod_inv(&y, &order);
-        let powers_yinv = scalar_powers(y_inv, n);
+        let powers_y = iterate(y.clone(), |i| i.clone() * y)
+            .take(n)
+            .collect::<Vec<BigInt>>();
+        let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
+            .take(n)
+            .collect::<Vec<BigInt>>();
 
         //   let mut L_vec = Vec::with_capacity(n);
         //   let mut R_vec = Vec::with_capacity(n);
@@ -281,7 +286,9 @@ impl WeightedInnerProdArg {
 
         // compute powers of y
         let y_inv = BigInt::mod_inv(&y, &order);
-        let powers_yinv = scalar_powers(y_inv, n);
+        let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
+            .take(n)
+            .collect::<Vec<BigInt>>();
 
         if n != 1 {
             let n = n / 2;
@@ -391,7 +398,9 @@ impl WeightedInnerProdArg {
 
         // compute powers of y
         let y_inv = BigInt::mod_inv(&y, &order);
-        let powers_yinv = scalar_powers(y_inv, n);
+        let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
+            .take(n)
+            .collect::<Vec<BigInt>>();
 
         let lg_n = self.L.len();
         assert!(
@@ -500,17 +509,6 @@ impl WeightedInnerProdArg {
     }
 }
 
-fn scalar_powers(y: BigInt, n: usize) -> Vec<BigInt> {
-    let mut next_pow: BigInt = y.clone();
-    let mut pow_y: Vec<BigInt> = Vec::with_capacity(n);
-    let order = FE::q();
-    for i in 0..n {
-        pow_y.push(next_pow);
-        next_pow = BigInt::mod_mul(&pow_y[i], &y, &order);
-    }
-    return pow_y;
-}
-
 fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
     assert_eq!(
         a.len(),
@@ -518,7 +516,9 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
         "weighted_inner_product(a,b): lengths of vectors do not match"
     );
     let order = FE::q();
-    let y_powers = scalar_powers(y, a.len());
+    let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
+            .take(a.len())
+            .collect::<Vec<BigInt>>();
     let n = a.len();
     let out = (0..n)
         .map(|i| {
@@ -541,7 +541,8 @@ mod tests {
     use curv::{FE, GE};
     use proofs::range_proof::generate_random_point;
     use proofs::weighted_inner_product::WeightedInnerProdArg;
-    use proofs::weighted_inner_product::{scalar_powers, weighted_inner_product};
+    use proofs::weighted_inner_product::{weighted_inner_product};
+    use itertools::iterate;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
@@ -816,7 +817,11 @@ mod tests {
         ];
         let y = BigInt::from(2);
 
-        let y_powers = scalar_powers(y.clone(), 4);
+        let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
+            .take(4)
+            .collect::<Vec<BigInt>>();
+        // let y_powers = scalar_powers(y.clone(), 4);
+        
         let expect_y_powers = vec![
             BigInt::from(2),
             BigInt::from(4),

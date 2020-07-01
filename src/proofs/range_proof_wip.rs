@@ -55,10 +55,14 @@ impl RangeProofWIP {
         
         let g_vec = g_vec.to_vec();
         let h_vec = h_vec.to_vec();
-
+        let n = g_vec.len();
         let two = BigInt::from(2);
         let one = BigInt::from(1);
         let order = FE::q();
+
+        // All of the input vectors must have the same length.
+        assert_eq!(h_vec.len(), n);
+        assert!(n.is_power_of_two());
 
         //concat all secrets:
         secret.reverse();
