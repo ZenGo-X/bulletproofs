@@ -820,7 +820,6 @@ mod tests {
         let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
             .take(4)
             .collect::<Vec<BigInt>>();
-        // let y_powers = scalar_powers(y.clone(), 4);
         
         let expect_y_powers = vec![
             BigInt::from(2),
