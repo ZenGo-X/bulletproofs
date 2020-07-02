@@ -17,3 +17,5 @@ version 3 of the License, or (at your option) any later version.
 
 pub mod inner_product;
 pub mod range_proof;
+pub mod weighted_inner_product;
+pub mod range_proof_wip;
