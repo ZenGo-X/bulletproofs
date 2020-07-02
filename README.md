@@ -1,5 +1,5 @@
 # Bulletproofs
-The library implements [Bulletproofs+](https://eprint.iacr.org/2020/735.pdf) and [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) aggregated range proofs with multi-exponent verification. The library supports  multiple elliptic curves: _secp256k1_ , _ristretto_ , _ed25519_
+This library implements [Bulletproofs+](https://eprint.iacr.org/2020/735.pdf) and [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) aggregated range proofs with multi-exponent verification. The library supports  multiple elliptic curves: _secp256k1_ , _ristretto_ , _ed25519_
 
 
 ## Usage
