@@ -513,4 +513,11 @@ mod tests {
         let kzen_label = BigInt::from(KZen);
         test_helper(&kzen_label, 8, 1);
     }
+
+    #[test]
+    pub fn test_batch_4_wip_range_proof_64() {
+        let KZen: &[u8] = &[75, 90, 101, 110];
+        let kzen_label = BigInt::from(KZen);
+        test_helper(&kzen_label, 64, 4);
+    }
 }

@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 /*
 
 Copyright 2018 by Kzen Networks
@@ -449,8 +450,7 @@ mod bench_wip_range_proof {
             let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
             
             b.iter(|| {
-                let range_proof_wip = 
-                    RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+                RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
             })
         });
     }
@@ -514,8 +514,7 @@ mod bench_wip_range_proof {
             let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
             
             b.iter(|| {
-                let range_proof_wip = 
-                    RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+                RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
             })
         });
     }
