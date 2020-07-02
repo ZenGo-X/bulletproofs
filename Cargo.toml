@@ -1,8 +1,9 @@
 [package]
 name = "bulletproof"
-version = "0.3.0"
+version = "1.0.0"
 authors = [
-    "Omer <omer@kzencorp.com>",
+    "Omer Shlomovits <omer@kzencorp.com>",
+    "Suyash Bagad <suyashnbagad1997@gmail.com>"
 ]
 
 [lib]
