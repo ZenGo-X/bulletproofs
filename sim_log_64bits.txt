@@ -1,0 +1,276 @@
+
+running 37 tests
+test proofs::inner_product::tests::make_ipp_1 ... ignored
+test proofs::inner_product::tests::make_ipp_16 ... ignored
+test proofs::inner_product::tests::make_ipp_16_fast_verify ... ignored
+test proofs::inner_product::tests::make_ipp_1_fast_verify ... ignored
+test proofs::inner_product::tests::make_ipp_2 ... ignored
+test proofs::inner_product::tests::make_ipp_2_fast_verify ... ignored
+test proofs::inner_product::tests::make_ipp_32 ... ignored
+test proofs::inner_product::tests::make_ipp_32_fast_verify ... ignored
+test proofs::inner_product::tests::make_ipp_4 ... ignored
+test proofs::inner_product::tests::make_ipp_4_fast_verify ... ignored
+test proofs::inner_product::tests::make_ipp_8 ... ignored
+test proofs::inner_product::tests::make_ipp_8_fast_verify ... ignored
+test proofs::inner_product::tests::make_ipp_non_power_2 ... ignored
+test proofs::range_proof::tests::test_batch_1_range_proof_8 ... ignored
+test proofs::range_proof::tests::test_batch_2_range_proof_16 ... ignored
+test proofs::range_proof::tests::test_batch_4_range_proof_32 ... ignored
+test proofs::range_proof::tests::test_batch_4_range_proof_32_out_of_range ... ignored
+test proofs::range_proof::tests::test_batch_4_range_proof_64 ... ignored
+test proofs::range_proof_wip::tests::test_batch_1_wip_range_proof_8 ... ignored
+test proofs::range_proof_wip::tests::test_batch_2_wip_range_proof_16 ... ignored
+test proofs::range_proof_wip::tests::test_batch_4_wip_range_proof_32 ... ignored
+test proofs::range_proof_wip::tests::test_batch_4_wip_range_proof_32_out_of_range ... ignored
+test proofs::range_proof_wip::tests::test_batch_4_wip_range_proof_64 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_1 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_16 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_16_fast_verify ... ignored
+test proofs::weighted_inner_product::tests::make_wip_1_fast_verify ... ignored
+test proofs::weighted_inner_product::tests::make_wip_2 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_2_fast_verify ... ignored
+test proofs::weighted_inner_product::tests::make_wip_32 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_32_fast_verify ... ignored
+test proofs::weighted_inner_product::tests::make_wip_4 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_4_fast_verify ... ignored
+test proofs::weighted_inner_product::tests::make_wip_8 ... ignored
+test proofs::weighted_inner_product::tests::make_wip_8_fast_verify ... ignored
+test proofs::weighted_inner_product::tests::make_wip_non_power_2 ... ignored
+test proofs::weighted_inner_product::tests::test_wip ... ignored
+
+test result: ok. 0 passed; 0 failed; 37 ignored; 0 measured; 0 filtered out
+
+Warning: Sample sizes < 10 will be disallowed in Criterion.rs 0.3.0.
+Benchmarking range proof, n=16, m=2
+Benchmarking range proof, n=16, m=2: Warming up for 3.0000 s
+Benchmarking range proof, n=16, m=2: Collecting 6 samples in estimated 5.5325 s (84 iterations)
+Benchmarking range proof, n=16, m=2: Analyzing
+range proof, n=16, m=2  time:   [57.976 ms 60.408 ms 65.021 ms]
+                        change: [+1.4101% +5.0539% +8.8987%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+
+Benchmarking create range proof, n=16, m=2
+Benchmarking create range proof, n=16, m=2: Warming up for 3.0000 s
+Benchmarking create range proof, n=16, m=2: Collecting 6 samples in estimated 5.6369 s (147 iterations)
+Benchmarking create range proof, n=16, m=2: Analyzing
+create range proof, n=16, m=2
+                        time:   [38.615 ms 39.349 ms 41.210 ms]
+                        change: [-0.5198% +3.6134% +7.2717%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+
+Benchmarking verify range proof, n=16, m=2
+Benchmarking verify range proof, n=16, m=2: Warming up for 3.0000 s
+Benchmarking verify range proof, n=16, m=2: Collecting 6 samples in estimated 5.2971 s (231 iterations)
+Benchmarking verify range proof, n=16, m=2: Analyzing
+verify range proof, n=16, m=2
+                        time:   [22.719 ms 23.271 ms 23.899 ms]
+                        change: [+6.7049% +8.9983% +11.111%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+
+Benchmarking multiexp-based verify range proof, n=16, m=2
+Benchmarking multiexp-based verify range proof, n=16, m=2: Warming up for 3.0000 s
+Benchmarking multiexp-based verify range proof, n=16, m=2: Collecting 6 samples in estimated 5.2560 s (273 iterations)
+Benchmarking multiexp-based verify range proof, n=16, m=2: Analyzing
+multiexp-based verify range proof, n=16, m=2
+                        time:   [20.629 ms 22.252 ms 22.847 ms]
+                        change: [+15.089% +24.918% +33.088%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+
+Benchmarking create range proof, n=64, m=1
+Benchmarking create range proof, n=64, m=1: Warming up for 3.0000 s
+Benchmarking create range proof, n=64, m=1: Collecting 6 samples in estimated 6.5145 s (84 iterations)
+Benchmarking create range proof, n=64, m=1: Analyzing
+create range proof, n=64, m=1
+                        time:   [76.690 ms 82.033 ms 87.527 ms]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high severe
+
+Benchmarking fast verify range proof, n=64, m=1
+Benchmarking fast verify range proof, n=64, m=1: Warming up for 3.0000 s
+Benchmarking fast verify range proof, n=64, m=1: Collecting 6 samples in estimated 5.2706 s (147 iterations)
+Benchmarking fast verify range proof, n=64, m=1: Analyzing
+fast verify range proof, n=64, m=1
+                        time:   [31.537 ms 31.693 ms 31.843 ms]
+
+Benchmarking create range proof, n=64, m=4
+Benchmarking create range proof, n=64, m=4: Warming up for 3.0000 s
+Benchmarking create range proof, n=64, m=4: Collecting 6 samples in estimated 6.4811 s (21 iterations)
+Benchmarking create range proof, n=64, m=4: Analyzing
+create range proof, n=64, m=4
+                        time:   [301.22 ms 302.89 ms 306.42 ms]
+                        change: [-1.4143% +0.3196% +2.5650%] (p = 0.79 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high severe
+
+Benchmarking fast verify range proof, n=64, m=4
+Benchmarking fast verify range proof, n=64, m=4: Warming up for 3.0000 s
+Benchmarking fast verify range proof, n=64, m=4: Collecting 6 samples in estimated 8.7203 s (42 iterations)
+Benchmarking fast verify range proof, n=64, m=4: Analyzing
+fast verify range proof, n=64, m=4
+                        time:   [118.68 ms 119.53 ms 121.56 ms]
+                        change: [-1.7497% -0.6766% +0.5481%] (p = 0.34 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high mild
+
+Benchmarking create range proof, n=64, m=8
+Benchmarking create range proof, n=64, m=8: Warming up for 3.0000 s
+Benchmarking create range proof, n=64, m=8: Collecting 6 samples in estimated 12.998 s (21 iterations)
+Benchmarking create range proof, n=64, m=8: Analyzing
+create range proof, n=64, m=8
+                        time:   [604.18 ms 663.35 ms 712.39 ms]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high severe
+
+Benchmarking fast verify range proof, n=64, m=8
+Benchmarking fast verify range proof, n=64, m=8: Warming up for 3.0000 s
+Benchmarking fast verify range proof, n=64, m=8: Collecting 6 samples in estimated 12.754 s (21 iterations)
+Benchmarking fast verify range proof, n=64, m=8: Analyzing
+fast verify range proof, n=64, m=8
+                        time:   [251.42 ms 253.13 ms 255.31 ms]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high severe
+
+Benchmarking create range proof, n=64, m=16
+Benchmarking create range proof, n=64, m=16: Warming up for 3.0000 s
+Benchmarking create range proof, n=64, m=16: Collecting 6 samples in estimated 32.136 s (21 iterations)
+Benchmarking create range proof, n=64, m=16: Analyzing
+create range proof, n=64, m=16
+                        time:   [1.3219 s 1.4669 s 1.6152 s]
+
+Benchmarking fast verify range proof, n=64, m=16
+Benchmarking fast verify range proof, n=64, m=16: Warming up for 3.0000 s
+Benchmarking fast verify range proof, n=64, m=16: Collecting 6 samples in estimated 31.560 s (21 iterations)
+Benchmarking fast verify range proof, n=64, m=16: Analyzing
+fast verify range proof, n=64, m=16
+                        time:   [510.01 ms 517.05 ms 524.89 ms]
+
+Benchmarking create range proof, n=64, m=32
+Benchmarking create range proof, n=64, m=32: Warming up for 3.0000 s
+Benchmarking create range proof, n=64, m=32: Collecting 6 samples in estimated 55.105 s (21 iterations)
+Benchmarking create range proof, n=64, m=32: Analyzing
+create range proof, n=64, m=32
+                        time:   [2.3938 s 2.4161 s 2.5032 s]
+
+Benchmarking fast verify range proof, n=64, m=32
+Benchmarking fast verify range proof, n=64, m=32: Warming up for 3.0000 s
+Benchmarking fast verify range proof, n=64, m=32: Collecting 6 samples in estimated 72.505 s (21 iterations)
+Benchmarking fast verify range proof, n=64, m=32: Analyzing
+fast verify range proof, n=64, m=32
+                        time:   [932.48 ms 934.58 ms 939.38 ms]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high mild
+
+Warning: Sample sizes < 10 will be disallowed in Criterion.rs 0.3.0.
+Benchmarking wip range proof, n=16, m=2
+Benchmarking wip range proof, n=16, m=2: Warming up for 3.0000 s
+Benchmarking wip range proof, n=16, m=2: Collecting 6 samples in estimated 5.6421 s (126 iterations)
+Benchmarking wip range proof, n=16, m=2: Analyzing
+wip range proof, n=16, m=2
+                        time:   [44.357 ms 44.911 ms 46.594 ms]
+                        change: [-10.399% -4.9832% +1.6619%] (p = 0.18 > 0.05)
+                        No change in performance detected.
+
+Benchmarking create wip range proof, n=16, m=2
+Benchmarking create wip range proof, n=16, m=2: Warming up for 3.0000 s
+Benchmarking create wip range proof, n=16, m=2: Collecting 6 samples in estimated 5.2591 s (168 iterations)
+Benchmarking create wip range proof, n=16, m=2: Analyzing
+create wip range proof, n=16, m=2
+                        time:   [30.864 ms 31.365 ms 31.761 ms]
+                        change: [-4.4314% -1.4030% +1.7133%] (p = 0.49 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high mild
+
+Benchmarking verify wip range proof using multi-exp, n=16, m=2
+Benchmarking verify wip range proof using multi-exp, n=16, m=2: Warming up for 3.0000 s
+Benchmarking verify wip range proof using multi-exp, n=16, m=2: Collecting 6 samples in estimated 5.2837 s (357 iterations)
+Benchmarking verify wip range proof using multi-exp, n=16, m=2: Analyzing
+verify wip range proof using multi-exp, n=16, m=2
+                        time:   [13.557 ms 14.041 ms 14.495 ms]
+                        change: [-1.9731% +0.3029% +2.9939%] (p = 0.82 > 0.05)
+                        No change in performance detected.
+
+Benchmarking create wip range proof, n=64, m=1
+Benchmarking create wip range proof, n=64, m=1: Warming up for 3.0000 s
+Benchmarking create wip range proof, n=64, m=1: Collecting 6 samples in estimated 5.3406 s (84 iterations)
+Benchmarking create wip range proof, n=64, m=1: Analyzing
+create wip range proof, n=64, m=1
+                        time:   [65.448 ms 71.904 ms 75.869 ms]
+
+Benchmarking fast verify wip range proof, n=64, m=1
+Benchmarking fast verify wip range proof, n=64, m=1: Warming up for 3.0000 s
+Benchmarking fast verify wip range proof, n=64, m=1: Collecting 6 samples in estimated 5.1158 s (168 iterations)
+Benchmarking fast verify wip range proof, n=64, m=1: Analyzing
+fast verify wip range proof, n=64, m=1
+                        time:   [25.557 ms 25.985 ms 27.311 ms]
+
+Benchmarking create wip range proof, n=64, m=4
+Benchmarking create wip range proof, n=64, m=4: Warming up for 3.0000 s
+Benchmarking create wip range proof, n=64, m=4: Collecting 6 samples in estimated 5.2546 s (21 iterations)
+Benchmarking create wip range proof, n=64, m=4: Analyzing
+create wip range proof, n=64, m=4
+                        time:   [236.45 ms 241.79 ms 259.77 ms]
+                        change: [-0.6007% +4.7453% +10.275%] (p = 0.12 > 0.05)
+                        No change in performance detected.
+
+Benchmarking fast verify wip range proof, n=64, m=4
+Benchmarking fast verify wip range proof, n=64, m=4: Warming up for 3.0000 s
+Benchmarking fast verify wip range proof, n=64, m=4: Collecting 6 samples in estimated 6.0804 s (42 iterations)
+Benchmarking fast verify wip range proof, n=64, m=4: Analyzing
+fast verify wip range proof, n=64, m=4
+                        time:   [98.530 ms 99.389 ms 102.43 ms]
+                        change: [-2.2674% +0.7954% +5.8945%] (p = 0.74 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high severe
+
+Benchmarking create wip range proof, n=64, m=8
+Benchmarking create wip range proof, n=64, m=8: Warming up for 3.0000 s
+Benchmarking create wip range proof, n=64, m=8: Collecting 6 samples in estimated 10.971 s (21 iterations)
+Benchmarking create wip range proof, n=64, m=8: Analyzing
+create wip range proof, n=64, m=8
+                        time:   [480.35 ms 484.00 ms 498.03 ms]
+
+Benchmarking fast verify wip range proof, n=64, m=8
+Benchmarking fast verify wip range proof, n=64, m=8: Warming up for 3.0000 s
+Benchmarking fast verify wip range proof, n=64, m=8: Collecting 6 samples in estimated 9.2392 s (21 iterations)
+Benchmarking fast verify wip range proof, n=64, m=8: Analyzing
+fast verify wip range proof, n=64, m=8
+                        time:   [200.61 ms 201.68 ms 205.68 ms]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high severe
+
+Benchmarking create wip range proof, n=64, m=16
+Benchmarking create wip range proof, n=64, m=16: Warming up for 3.0000 s
+Benchmarking create wip range proof, n=64, m=16: Collecting 6 samples in estimated 22.789 s (21 iterations)
+Benchmarking create wip range proof, n=64, m=16: Analyzing
+create wip range proof, n=64, m=16
+                        time:   [1.1890 s 1.2429 s 1.2861 s]
+
+Benchmarking fast verify wip range proof, n=64, m=16
+Benchmarking fast verify wip range proof, n=64, m=16: Warming up for 3.0000 s
+Benchmarking fast verify wip range proof, n=64, m=16: Collecting 6 samples in estimated 25.821 s (21 iterations)
+Benchmarking fast verify wip range proof, n=64, m=16: Analyzing
+fast verify wip range proof, n=64, m=16
+                        time:   [461.74 ms 473.54 ms 481.01 ms]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) low mild
+
+Benchmarking create wip range proof, n=64, m=32
+Benchmarking create wip range proof, n=64, m=32: Warming up for 3.0000 s
+Benchmarking create wip range proof, n=64, m=32: Collecting 6 samples in estimated 71.921 s (21 iterations)
+Benchmarking create wip range proof, n=64, m=32: Analyzing
+create wip range proof, n=64, m=32
+                        time:   [2.3689 s 2.6019 s 2.8304 s]
+
+Benchmarking fast verify wip range proof, n=64, m=32
+Benchmarking fast verify wip range proof, n=64, m=32: Warming up for 3.0000 s
+Benchmarking fast verify wip range proof, n=64, m=32: Collecting 6 samples in estimated 76.544 s (21 iterations)
+Benchmarking fast verify wip range proof, n=64, m=32: Analyzing
+fast verify wip range proof, n=64, m=32
+                        time:   [957.54 ms 1.0277 s 1.0775 s]
+Found 1 outliers among 6 measurements (16.67%)
+  1 (16.67%) high mild
+
