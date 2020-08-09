@@ -10,4 +10,4 @@ The library contains multiple test examples that can be followed (run them with 
  Run `cargo bench`. For _ristretto_ the current implementation is ~4x  slower than [dalek-cryptography](https://github.com/dalek-cryptography/curve25519-dalek). 
 
 ## Contact
-Feel free to [reach out](mailto:github@kzencorp.com) or join the KZen Research [Telegram](https://t.me/kzen_research) for discussions on code and research.
+Feel free to [reach out](mailto:github@kzencorp.com) or join the ZenGo X [Telegram](https://t.me/zengo_x) for discussions on code and research.
