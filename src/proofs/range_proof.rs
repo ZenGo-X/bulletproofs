@@ -568,9 +568,6 @@ impl RangeProof {
             .take(n)
             .collect::<Vec<BigInt>>();
 
-        // sum_vec2n = 1 + 2 + ... + 2^n
-        // let sum_vec2n = vec_2n.iter().fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-
         // y_inv_vec = (1, y^{-1}, y^{-2}, ..., y^{-(nm-1)})
         let y_inv_vec = iterate(one.clone(), |i| i.clone() * &y_inv_bn)
             .take(nm)
