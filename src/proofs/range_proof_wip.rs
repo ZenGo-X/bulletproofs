@@ -459,6 +459,7 @@ impl RangeProofWIP {
             .collect::<Vec<BigInt>>();
 
         // d = z^2 d1 + z^4 d2 + ... + z^{2^m} dm
+        // where dj = (0^{(j-1)n} || 2^{n} || 0^{(m-j)n}) \in \Z_q^{mn}
         let d = (0..nm)
             .map(|i| {
                 let k = i % n;
