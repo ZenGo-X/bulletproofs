@@ -20,6 +20,7 @@ extern crate criterion;
 extern crate bulletproof;
 extern crate curv;
 
+
 mod bench_range_proof {
 
     use bulletproof::proofs::range_proof::*;
@@ -29,6 +30,72 @@ mod bench_range_proof {
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::{BigInt, FE, GE};
+
+    static AGGREGATION_SIZES: [usize; 6] = [1, 2, 4, 8, 16, 32];
+
+    fn aggregated_rangeproof_helper(n: usize, c: &mut Criterion) {
+        let label = format!("Aggregated {}-bit rangeproofs verification", n);
+
+        c.bench_function_over_inputs(
+            &label,
+            move |b, &&m| {
+                let nm = n * m;
+                let kzen: &[u8] = &[75, 90, 101, 110];
+                let kzen_label = BigInt::from(kzen);
+
+                let g: GE = ECPoint::generator();
+                let label = BigInt::from(1);
+                let hash = HSha512::create_hash(&[&label]);
+                let h = generate_random_point(&Converter::to_vec(&hash));
+
+                let g_vec = (0..nm)
+                    .map(|i| {
+                        let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
+                        let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                        generate_random_point(&Converter::to_vec(&hash_i))
+                    })
+                    .collect::<Vec<GE>>();
+
+                // can run in parallel to g_vec:
+                let h_vec = (0..nm)
+                    .map(|i| {
+                        let kzen_label_j =
+                            BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
+                        let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                        generate_random_point(&Converter::to_vec(&hash_j))
+                    })
+                    .collect::<Vec<GE>>();
+
+                let range = BigInt::from(2).pow(n as u32);
+                let v_vec = (0..m)
+                    .map(|_i| {
+                        let v = BigInt::sample_below(&range);
+                        let v_fe: FE = ECScalar::from(&v);
+                        v_fe
+                    })
+                    .collect::<Vec<FE>>();
+
+                let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+
+                let ped_com_vec = (0..m)
+                    .map(|i| {
+                        let ped_com = g.scalar_mul(&v_vec[i].get_element())
+                            + h.scalar_mul(&r_vec[i].get_element());
+                        ped_com
+                    })
+                    .collect::<Vec<GE>>();
+
+                let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+        
+                b.iter(|| {
+                    let result =
+                        RangeProof::aggregated_verify(&range_proof, &g_vec, &h_vec, &g, &h, &ped_com_vec, n);
+                    assert!(result.is_ok());
+                })
+            },
+            &AGGREGATION_SIZES,
+        );
+    }
 
     pub fn bench_range_proof_16_2(c: &mut Criterion) {
         c.bench_function("range proof, n=16, m=2", move |b| {
@@ -812,6 +879,10 @@ mod bench_range_proof {
         });
     }
 
+    pub fn verify_agg_rangeproof_64(c: &mut Criterion) {
+        aggregated_rangeproof_helper(64, c);
+    }
+
     criterion_group! {
     name = range_proof;
     config = Criterion::default().sample_size(10);
@@ -830,6 +901,7 @@ mod bench_range_proof {
     fast_verify_range_proof_64_16,
     create_range_proof_64_32,
     fast_verify_range_proof_64_32,
+    verify_agg_rangeproof_64,
     }
 }
 
@@ -839,6 +911,49 @@ mod bench_wip_range_proof {
     use curv::arithmetic::traits::{Samplable};
     use curv::elliptic::curves::traits::*;
     use curv::{BigInt, FE, GE};
+
+    static AGGREGATION_SIZES: [usize; 6] = [1, 2, 4, 8, 16, 32];
+
+    fn aggregated_wip_rangeproof_helper(n: usize, c: &mut Criterion) {
+        let label = format!("Aggregated {}-bit wip rangeproofs verification", n);
+
+        c.bench_function_over_inputs(
+            &label,
+            move |b, &&m| {
+                // generate stmt
+                let KZen: &[u8] = &[75, 90, 101, 110];
+                let kzen_label = BigInt::from(KZen);
+                let stmt = StatementRP::generate_bases(&kzen_label, m, n);
+        
+                // generate witness
+                let G = stmt.G;
+                let H = stmt.H;
+                let range = BigInt::from(2).pow(n as u32);
+                let v_vec = (0..m)
+                    .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+                    .collect::<Vec<FE>>();
+        
+                let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        
+                let ped_com_vec = (0..m)
+                    .map(|i| {
+                        let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                        ped_com
+                    })
+                    .collect::<Vec<GE>>();    
+                
+                let range_proof_wip = 
+                    RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+
+                b.iter(|| {
+                    let result = 
+                        RangeProofWIP::aggregated_verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
+                    assert!(result.is_ok());
+                })
+            },
+            &AGGREGATION_SIZES,
+        );
+    }
 
     pub fn wip_range_proof_16_2(c: &mut Criterion) {
         c.bench_function("wip range proof, n=16, m=2", move |b| {
@@ -1262,6 +1377,10 @@ mod bench_wip_range_proof {
         });
     }
 
+    pub fn verify_agg_wip_rangeproof_64(c: &mut Criterion) {
+        aggregated_wip_rangeproof_helper(64, c);
+    }
+
     criterion_group! {
     name = wip_range_proof;
     config = Criterion::default().sample_size(10);
@@ -1279,6 +1398,7 @@ mod bench_wip_range_proof {
         verify_wip_range_proof_64_16,
         create_wip_range_proof_64_32,
         verify_wip_range_proof_64_32,
+        verify_agg_wip_rangeproof_64,
     }
 }
 

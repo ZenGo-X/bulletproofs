@@ -12,3 +12,4 @@ Cargo.lock
 .idea
 /ipp_explanation/
 bpbench.txt
+agg_ver_data.log
