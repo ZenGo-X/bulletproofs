@@ -393,6 +393,10 @@ impl RangeProofWIP {
         }
     }
 
+    ///
+    /// Verify a wip-based range proof in a using a single multi-exponentiation equation.
+    /// The final check costs a multi-exponentiation of size (2mn + 2log(mn) + m + 5). 
+    /// 
     pub fn aggregated_verify(
         &self,
         stmt: StatementRP,
@@ -449,12 +453,12 @@ impl RangeProofWIP {
             .take(n)
             .collect::<Vec<BigInt>>();
 
-        // vec_z2m = (z^2, z^4, ..., z^{2m})
+        // vec_z2m = (z^2, z^4, ..., z^{2^m})
         let vec_z2m = iterate(z_sq_bn.clone(), |i| i.clone() * &z_sq_bn)
             .take(m)
             .collect::<Vec<BigInt>>();
 
-        // d = z^2 d1 + z^4 d2 + ... + z^{2m} dm
+        // d = z^2 d1 + z^4 d2 + ... + z^{2^m} dm
         let d = (0..nm)
             .map(|i| {
                 let k = i % n;
@@ -573,40 +577,41 @@ impl RangeProofWIP {
         let scalar_L = minus_e_sq_x_sq_vec;
         let scalar_R = minus_e_sq_x_inv_sq_vec;
 
-        // exponent of sumcom
+        // exponent of P
         let minus_e_sq = BigInt::mod_sub(&BigInt::zero(), &e_sq_bn, &order);
-        let scalar_sumcom = minus_e_sq.clone();
+        let scalar_P = minus_e_sq.clone();
+
+        // exponents of V_j (commitments)
+        let minus_e_sq_y_pow = BigInt::mod_mul(&minus_e_sq, &y_pow, &order);
+        let scalar_com: Vec<BigInt> = (0..m)
+            .map(|i| {
+                BigInt::mod_mul(&vec_z2m[i], &minus_e_sq_y_pow, &order)
+            })
+            .collect();
 
         // exponents of A
         let scalar_A = BigInt::mod_sub(&BigInt::zero(), &e_bn, &order);
         
         // compute concatenated exponent vector
-        let mut scalars: Vec<BigInt> = Vec::with_capacity(2*nm + 2*lg_nm + 5);
+        let mut scalars: Vec<BigInt> = Vec::with_capacity(2*nm + 2*lg_nm + m + 5);
         scalars.extend_from_slice(&scalar_g_vec);
         scalars.extend_from_slice(&scalar_h_vec);
         scalars.push(scalar_g);
         scalars.extend_from_slice(&scalar_L);
         scalars.extend_from_slice(&scalar_R);
-        scalars.push(scalar_sumcom);
+        scalars.push(scalar_P);
+        scalars.extend_from_slice(&scalar_com);
         scalars.push(scalar_A);
 
-        // compute product of commitments
-        // sum_com = P + V_1^{z^{2} * y^{mn+1}} + V_2^{z^{4} * y^{mn+1}} + ... + V_m^{z^{2^{m}} * y^{mn+1}}
-        let sum_com = (0..m)
-            .map(|i| {
-                let y_pow_z2i = BigInt::mod_mul(&y_pow, &vec_z2m[i].clone(), &order);
-                ped_com[i] * &ECScalar::from(&y_pow_z2i)
-            })  
-            .fold(P, |acc,x| acc + x as GE);
-
         // compute concatenated base vector
-        let mut points: Vec<GE> = Vec::with_capacity(2*nm + 2*lg_nm + 5);
+        let mut points: Vec<GE> = Vec::with_capacity(2*nm + 2*lg_nm + m + 5);
         points.extend_from_slice(G);
         points.extend_from_slice(H);
         points.push(*g);
         points.extend_from_slice(&wip.L);
         points.extend_from_slice(&wip.R);
-        points.push(sum_com);
+        points.push(P);
+        points.extend_from_slice(&ped_com);
         points.push(wip.a_tag);
 
         let h_delta_prime = h * &ECScalar::from(&wip.delta_prime);
