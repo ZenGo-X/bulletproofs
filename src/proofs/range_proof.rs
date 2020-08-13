@@ -531,11 +531,8 @@ impl RangeProof {
         let yG: GE = base_point * &y;
         let z = HSha256::create_hash_from_ge(&[&yG]);
         let z_bn = z.to_big_int();
-        // let minus_z = BigInt::mod_sub(&order, &z_bn, &order);
-        // let minus_z_fe: FE = ECScalar::from(&minus_z);
         let z_squared = BigInt::mod_pow(&z_bn, &BigInt::from(2), &order);
-        // let z_cube = BigInt::mod_mul(&z_bn, &z_squared, &order);
-
+        
         let challenge_x = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
         let challenge_x_sq = challenge_x.mul(&challenge_x.get_element());
 
@@ -728,6 +725,7 @@ impl RangeProof {
             .map(|i| points[i] * &ECScalar::from(&scalars[i]))
             .fold(H_times_scalar_H, |acc, x| acc + x as GE);
         
+        // single multi-exponentiation check
         if lhs == self.A {
             Ok(())
         } else {
