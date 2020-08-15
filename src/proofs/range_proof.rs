@@ -501,7 +501,6 @@ impl RangeProof {
         ped_com: &[GE],
         bit_length: usize,
     ) -> Result<(), Errors> {
-
         let n = bit_length;
         let m = ped_com.len();
         let nm = m * n;
@@ -514,10 +513,7 @@ impl RangeProof {
         // All of the input vectors must have the same length.
         assert_eq!(g_vec.len(), nm);
         assert_eq!(h_vec.len(), nm);
-        assert!(
-            nm.is_power_of_two(),
-            "(n*m) must be a power of two!"
-        );
+        assert!(nm.is_power_of_two(), "(n*m) must be a power of two!");
         assert!(
             lg_nm <= 64,
             "Not compatible for vector sizes greater than 2^64!"
@@ -532,7 +528,7 @@ impl RangeProof {
         let z = HSha256::create_hash_from_ge(&[&yG]);
         let z_bn = z.to_big_int();
         let z_squared = BigInt::mod_pow(&z_bn, &BigInt::from(2), &order);
-        
+
         let challenge_x = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
         let challenge_x_sq = challenge_x.mul(&challenge_x.get_element());
 
@@ -547,7 +543,8 @@ impl RangeProof {
         let ux = G * &x_u_fe;
 
         // generate a random scalar to combine 2 verification equations
-        let challenge_ver = HSha256::create_hash_from_ge(&[&self.A, &self.S, &self.T1, &self.T2, G, H]);
+        let challenge_ver =
+            HSha256::create_hash_from_ge(&[&self.A, &self.S, &self.T1, &self.T2, G, H]);
         let challenge_ver_bn = challenge_ver.to_big_int();
 
         // z2_vec = (z^2, z^3, z^4, ..., z^{m+1})
@@ -561,7 +558,9 @@ impl RangeProof {
             .collect::<Vec<BigInt>>();
 
         // sum_y_pow = 1 + y + ... + y^{nm}
-        let sum_y_pow = y_vec.iter().fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+        let sum_y_pow = y_vec
+            .iter()
+            .fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         // vec_2n = (1, 2, 2^2, 2^3, ..., 2^{n})
         let vec_2n = iterate(one.clone(), |i| i.clone() * &two)
@@ -586,7 +585,9 @@ impl RangeProof {
             .collect::<Vec<BigInt>>();
 
         // sum_d = <1^{mn}, d>
-        let sum_d = d.iter().fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+        let sum_d = d
+            .iter()
+            .fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
         // compute delta(y, z):
         let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
@@ -600,7 +601,12 @@ impl RangeProof {
         let mut minus_x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
         let mut allinv = BigInt::one();
-        for (Li, Ri) in self.inner_product_proof.L.iter().zip(self.inner_product_proof.R.iter()) {
+        for (Li, Ri) in self
+            .inner_product_proof
+            .L
+            .iter()
+            .zip(self.inner_product_proof.R.iter())
+        {
             let x = HSha256::create_hash_from_ge(&[&Li, &Ri, &ux]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
@@ -641,11 +647,9 @@ impl RangeProof {
 
         // exponent of g_vec
         let scalar_g_vec: Vec<BigInt> = (0..nm)
-            .map(|i| {
-                BigInt::mod_add(&a_times_s[i], &z_bn, &order)
-            })
+            .map(|i| BigInt::mod_add(&a_times_s[i], &z_bn, &order))
             .collect();
-        
+
         // exponent of h_vec
         let scalar_h_vec: Vec<BigInt> = (0..nm)
             .map(|i| {
@@ -656,7 +660,11 @@ impl RangeProof {
             .collect();
 
         // exponent of G
-        let ab = BigInt::mod_mul(&self.inner_product_proof.a_tag, &self.inner_product_proof.b_tag, &order);
+        let ab = BigInt::mod_mul(
+            &self.inner_product_proof.a_tag,
+            &self.inner_product_proof.b_tag,
+            &order,
+        );
         let ab_minus_tx = BigInt::mod_sub(&ab, &self.tx.to_big_int(), &order);
         let scalar_G1 = BigInt::mod_mul(&x_u, &ab_minus_tx, &order);
 
@@ -679,17 +687,15 @@ impl RangeProof {
 
         // exponents of commitments
         let scalar_coms: Vec<BigInt> = (0..m)
-            .map(|i| {
-                BigInt::mod_mul(&challenge_ver_bn, &z2_vec[i], &order)
-            })
+            .map(|i| BigInt::mod_mul(&challenge_ver_bn, &z2_vec[i], &order))
             .collect();
-        
+
         // exponents of T_1, T_2
         let scalar_T1 = BigInt::mod_mul(&challenge_ver_bn, &challenge_x.to_big_int(), &order);
         let scalar_T2 = BigInt::mod_mul(&challenge_ver_bn, &challenge_x_sq.to_big_int(), &order);
 
         // compute concatenated exponent vector
-        let mut scalars: Vec<BigInt> = Vec::with_capacity(2*nm + 2*lg_nm + m + 6);
+        let mut scalars: Vec<BigInt> = Vec::with_capacity(2 * nm + 2 * lg_nm + m + 6);
         scalars.extend_from_slice(&scalar_g_vec);
         scalars.extend_from_slice(&scalar_h_vec);
         scalars.push(scalar_G);
@@ -701,9 +707,9 @@ impl RangeProof {
         scalars.extend_from_slice(&scalar_coms);
         scalars.push(scalar_T1);
         scalars.push(scalar_T2);
-        
+
         // compute concatenated base vector
-        let mut points: Vec<GE> = Vec::with_capacity(2*nm + 2*lg_nm + m + 6);
+        let mut points: Vec<GE> = Vec::with_capacity(2 * nm + 2 * lg_nm + m + 6);
         points.extend_from_slice(g_vec);
         points.extend_from_slice(h_vec);
         points.push(*G);
@@ -721,14 +727,13 @@ impl RangeProof {
         let lhs = (0..tot_len)
             .map(|i| points[i] * &ECScalar::from(&scalars[i]))
             .fold(H_times_scalar_H, |acc, x| acc + x as GE);
-        
+
         // single multi-exponentiation check
         if lhs == self.A {
             Ok(())
         } else {
             Err(RangeProofError)
         }
-
     }
 }
 
@@ -756,11 +761,7 @@ mod tests {
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
 
-    pub fn test_helper(
-        seed: &BigInt, 
-        n: usize, 
-        m: usize
-    ) {
+    pub fn test_helper(seed: &BigInt, n: usize, m: usize) {
         let nm = n * m;
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
@@ -797,17 +798,13 @@ mod tests {
                 ped_com
             })
             .collect::<Vec<GE>>();
-        
+
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 
-    pub fn test_helper_aggregated(
-        seed: &BigInt, 
-        n: usize, 
-        m: usize
-    ) {
+    pub fn test_helper_aggregated(seed: &BigInt, n: usize, m: usize) {
         let nm = n * m;
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
@@ -844,9 +841,10 @@ mod tests {
                 ped_com
             })
             .collect::<Vec<GE>>();
-        
+
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
-        let result = RangeProof::aggregated_verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
+        let result =
+            RangeProof::aggregated_verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 
@@ -1058,14 +1056,14 @@ mod tests {
     }
 
     #[test]
-    pub fn test_batch_4_range_proof_64(){
+    pub fn test_batch_4_range_proof_64() {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
         test_helper(&kzen_label, 64, 4);
     }
 
     #[test]
-    pub fn test_agg_batch_4_range_proof_64(){
+    pub fn test_agg_batch_4_range_proof_64() {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
         test_helper_aggregated(&kzen_label, 64, 4);

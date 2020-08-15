@@ -20,7 +20,7 @@ version 3 of the License, or (at your option) any later version.
 // Bulletproofs (https://eprint.iacr.org/2017/1066) uses the inner product argument.
 // Bulletproofs+ (https://eprint.iacr.org/2020/735.pdf) uses the weighted inner product argument
 // which reduces the overall prover communication by ~15%
-// 
+//
 use curv::arithmetic::traits::Modulo;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
@@ -80,7 +80,7 @@ impl WeightedInnerProdArg {
             let n = n / 2;
 
             // we use notation a_L for the left half of vector a and so on
-            // Note: Bulletproofs+ paper uses (a_1, a_2) for (a_L, a_R) 
+            // Note: Bulletproofs+ paper uses (a_1, a_2) for (a_L, a_R)
             let (a_L, a_R) = a.split_at(n);
             let (b_L, b_R) = b.split_at(n);
             let (G_L, G_R) = G.split_at(n);
@@ -517,8 +517,8 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
     );
     let order = FE::q();
     let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
-            .take(a.len())
-            .collect::<Vec<BigInt>>();
+        .take(a.len())
+        .collect::<Vec<BigInt>>();
     let n = a.len();
     let out = (0..n)
         .map(|i| {
@@ -539,10 +539,10 @@ mod tests {
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
     use curv::{FE, GE};
-    use proofs::range_proof::generate_random_point;
-    use proofs::weighted_inner_product::WeightedInnerProdArg;
-    use proofs::weighted_inner_product::{weighted_inner_product};
     use itertools::iterate;
+    use proofs::range_proof::generate_random_point;
+    use proofs::weighted_inner_product::weighted_inner_product;
+    use proofs::weighted_inner_product::WeightedInnerProdArg;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
@@ -628,8 +628,9 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp =
-            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec);
+        let ipp = WeightedInnerProdArg::prove(
+            &g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec,
+        );
         let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
     }
@@ -718,8 +719,9 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp =
-            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec);
+        let ipp = WeightedInnerProdArg::prove(
+            &g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec,
+        );
         let verifier = ipp.fast_verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
     }
@@ -795,8 +797,9 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp =
-            WeightedInnerProdArg::prove(&g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec);
+        let ipp = WeightedInnerProdArg::prove(
+            &g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec,
+        );
         let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
     }
@@ -820,7 +823,7 @@ mod tests {
         let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
             .take(4)
             .collect::<Vec<BigInt>>();
-        
+
         let expect_y_powers = vec![
             BigInt::from(2),
             BigInt::from(4),
