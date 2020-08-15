@@ -33,13 +33,13 @@ use Errors::{self, WeightedInnerProdError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WeightedInnerProdArg {
-    L: Vec<GE>,
-    R: Vec<GE>,
-    a_tag: GE,
-    b_tag: GE,
-    r_prime: BigInt,
-    s_prime: BigInt,
-    delta_prime: BigInt,
+    pub(super) L: Vec<GE>,
+    pub(super) R: Vec<GE>,
+    pub(super) a_tag: GE,
+    pub(super) b_tag: GE,
+    pub(super) r_prime: BigInt,
+    pub(super) s_prime: BigInt,
+    pub(super) delta_prime: BigInt,
 }
 
 impl WeightedInnerProdArg {

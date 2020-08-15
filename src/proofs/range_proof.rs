@@ -491,6 +491,245 @@ impl RangeProof {
             Err(RangeProofError)
         }
     }
+
+    pub fn aggregated_verify(
+        &self,
+        g_vec: &[GE],
+        h_vec: &[GE],
+        G: &GE,
+        H: &GE,
+        ped_com: &[GE],
+        bit_length: usize,
+    ) -> Result<(), Errors> {
+
+        let n = bit_length;
+        let m = ped_com.len();
+        let nm = m * n;
+        let lg_nm = self.inner_product_proof.L.len();
+        let order = FE::q();
+        let two = BigInt::from(2);
+        let one = BigInt::from(1);
+        let zero = BigInt::zero();
+
+        // All of the input vectors must have the same length.
+        assert_eq!(g_vec.len(), nm);
+        assert_eq!(h_vec.len(), nm);
+        assert!(
+            nm.is_power_of_two(),
+            "(n*m) must be a power of two!"
+        );
+        assert!(
+            lg_nm <= 64,
+            "Not compatible for vector sizes greater than 2^64!"
+        );
+
+        // regenerate challenges y, z, x, x_u from transcript
+        let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
+        let y_bn = y.to_big_int();
+        let y_inv_bn = BigInt::mod_inv(&y_bn, &order);
+        let base_point: GE = ECPoint::generator();
+        let yG: GE = base_point * &y;
+        let z = HSha256::create_hash_from_ge(&[&yG]);
+        let z_bn = z.to_big_int();
+        let z_squared = BigInt::mod_pow(&z_bn, &BigInt::from(2), &order);
+        
+        let challenge_x = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
+        let challenge_x_sq = challenge_x.mul(&challenge_x.get_element());
+
+        let x_u = HSha256::create_hash(&[
+            &self.tau_x.to_big_int(),
+            &self.miu.to_big_int(),
+            &self.tx.to_big_int(),
+        ]);
+
+        // ux = g^{x_u}
+        let x_u_fe: FE = ECScalar::from(&x_u);
+        let ux = G * &x_u_fe;
+
+        // generate a random scalar to combine 2 verification equations
+        let challenge_ver = HSha256::create_hash_from_ge(&[&self.A, &self.S, &self.T1, &self.T2, G, H]);
+        let challenge_ver_bn = challenge_ver.to_big_int();
+
+        // z2_vec = (z^2, z^3, z^4, ..., z^{m+1})
+        let z2_vec = iterate(z_squared.clone(), |i| i.clone() * &z_bn)
+            .take(m)
+            .collect::<Vec<BigInt>>();
+
+        // y_vec = (1, y, y^2, ..., y^{nm-1})
+        let y_vec = iterate(one.clone(), |i| i.clone() * &y_bn)
+            .take(nm)
+            .collect::<Vec<BigInt>>();
+
+        // sum_y_pow = 1 + y + ... + y^{nm}
+        let sum_y_pow = y_vec.iter().fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+
+        // vec_2n = (1, 2, 2^2, 2^3, ..., 2^{n})
+        let vec_2n = iterate(one.clone(), |i| i.clone() * &two)
+            .take(n)
+            .collect::<Vec<BigInt>>();
+
+        // y_inv_vec = (1, y^{-1}, y^{-2}, ..., y^{-(nm-1)})
+        let y_inv_vec = iterate(one.clone(), |i| i.clone() * &y_inv_bn)
+            .take(nm)
+            .collect::<Vec<BigInt>>();
+
+        // d = z^2 d1 + z^3 d2 + ... + z^{m+1} dm
+        // where dj = (0^{(j-1)n} || 2^{n} || 0^{(m-j)n}) \in \Z_q^{mn}
+        let d = (0..nm)
+            .map(|i| {
+                let k = i % n;
+                let two_i = vec_2n[k].clone();
+                let j = i / n;
+                let z_j_2 = z2_vec[j].clone();
+                BigInt::mod_mul(&two_i, &z_j_2, &order)
+            })
+            .collect::<Vec<BigInt>>();
+
+        // sum_d = <1^{mn}, d>
+        let sum_d = d.iter().fold(zero.clone(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+
+        // compute delta(y, z):
+        let z_minus_zsq = BigInt::mod_sub(&z_bn, &z_squared, &order);
+        let z_minus_zsq_sum_y = BigInt::mod_mul(&z_minus_zsq, &sum_y_pow, &order);
+        let sum_d_z = BigInt::mod_mul(&sum_d, &z_bn, &order);
+        let delta = BigInt::mod_sub(&z_minus_zsq_sum_y, &sum_d_z, &order);
+
+        // compute sg and sh vectors (unrolling ipp verification)
+        let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
+        let mut x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
+        let mut minus_x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
+        let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
+        let mut allinv = BigInt::one();
+        for (Li, Ri) in self.inner_product_proof.L.iter().zip(self.inner_product_proof.R.iter()) {
+            let x = HSha256::create_hash_from_ge(&[&Li, &Ri, &ux]);
+            let x_bn = x.to_big_int();
+            let x_inv_fe = x.invert();
+            let x_inv_bn = x_inv_fe.to_big_int();
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
+            let x_inv_sq_bn =
+                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
+
+            x_sq_vec.push(x_sq_bn.clone());
+            x_inv_sq_vec.push(x_inv_sq_bn.clone());
+            minus_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_sq_bn, &order));
+            minus_x_inv_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_inv_sq_bn, &order));
+            allinv = allinv * x_inv_bn;
+        }
+
+        let mut s: Vec<BigInt> = Vec::with_capacity(nm);
+        s.push(allinv);
+        for i in 1..nm {
+            let lg_i =
+                (std::mem::size_of_val(&nm) * 8) - 1 - ((i as usize).leading_zeros() as usize);
+            let k = 1 << lg_i;
+            // The challenges are stored in "creation order" as [x_k,...,x_1],
+            // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
+            let x_lg_i_sq = x_sq_vec[(lg_nm - 1) - lg_i].clone();
+            s.push(s[i - k].clone() * x_lg_i_sq);
+        }
+
+        let a_times_s: Vec<BigInt> = (0..nm)
+            .map(|i| BigInt::mod_mul(&s[i], &self.inner_product_proof.a_tag, &order))
+            .collect();
+
+        let b_times_sinv: Vec<BigInt> = (0..nm)
+            .map(|i| {
+                let s_inv_i = BigInt::mod_inv(&s[i], &order);
+                BigInt::mod_mul(&s_inv_i, &self.inner_product_proof.b_tag, &order)
+            })
+            .collect();
+
+        // exponent of g_vec
+        let scalar_g_vec: Vec<BigInt> = (0..nm)
+            .map(|i| {
+                BigInt::mod_add(&a_times_s[i], &z_bn, &order)
+            })
+            .collect();
+        
+        // exponent of h_vec
+        let scalar_h_vec: Vec<BigInt> = (0..nm)
+            .map(|i| {
+                let b_sinv_plus_di = BigInt::mod_sub(&b_times_sinv[i], &d[i], &order);
+                let y_inv_b_sinv_plus_di = BigInt::mod_mul(&y_inv_vec[i], &b_sinv_plus_di, &order);
+                BigInt::mod_sub(&y_inv_b_sinv_plus_di, &z_bn, &order)
+            })
+            .collect();
+
+        // exponent of G
+        let ab = BigInt::mod_mul(&self.inner_product_proof.a_tag, &self.inner_product_proof.b_tag, &order);
+        let ab_minus_tx = BigInt::mod_sub(&ab, &self.tx.to_big_int(), &order);
+        let scalar_G1 = BigInt::mod_mul(&x_u, &ab_minus_tx, &order);
+
+        let delta_minus_tx = BigInt::mod_sub(&delta, &self.tx.to_big_int(), &order);
+        let scalar_G2 = BigInt::mod_mul(&challenge_ver_bn, &delta_minus_tx, &order);
+
+        let scalar_G = BigInt::mod_add(&scalar_G1, &scalar_G2, &order);
+
+        // exponent of H
+        let c_times_taux = BigInt::mod_mul(&challenge_ver_bn, &self.tau_x.to_big_int(), &order);
+        let scalar_H = BigInt::mod_sub(&self.miu.to_big_int(), &c_times_taux, &order);
+
+        // exponents of A, S
+        // let scalar_A = BigInt::mod_sub(&zero, &one, &order);
+        let scalar_S = BigInt::mod_sub(&zero, &challenge_x.to_big_int(), &order);
+
+        // exponent of L, R
+        let scalar_L = minus_x_sq_vec.clone();
+        let scalar_R = minus_x_inv_sq_vec.clone();
+
+        // exponents of commitments
+        let scalar_coms: Vec<BigInt> = (0..m)
+            .map(|i| {
+                BigInt::mod_mul(&challenge_ver_bn, &z2_vec[i], &order)
+            })
+            .collect();
+        
+        // exponents of T_1, T_2
+        let scalar_T1 = BigInt::mod_mul(&challenge_ver_bn, &challenge_x.to_big_int(), &order);
+        let scalar_T2 = BigInt::mod_mul(&challenge_ver_bn, &challenge_x_sq.to_big_int(), &order);
+
+        // compute concatenated exponent vector
+        let mut scalars: Vec<BigInt> = Vec::with_capacity(2*nm + 2*lg_nm + m + 6);
+        scalars.extend_from_slice(&scalar_g_vec);
+        scalars.extend_from_slice(&scalar_h_vec);
+        scalars.push(scalar_G);
+        // scalars.push(scalar_H);
+        // scalars.push(scalar_A);
+        scalars.push(scalar_S);
+        scalars.extend_from_slice(&scalar_L);
+        scalars.extend_from_slice(&scalar_R);
+        scalars.extend_from_slice(&scalar_coms);
+        scalars.push(scalar_T1);
+        scalars.push(scalar_T2);
+        
+        // compute concatenated base vector
+        let mut points: Vec<GE> = Vec::with_capacity(2*nm + 2*lg_nm + m + 6);
+        points.extend_from_slice(g_vec);
+        points.extend_from_slice(h_vec);
+        points.push(*G);
+        // points.push(*H);
+        // points.push(self.A);
+        points.push(self.S);
+        points.extend_from_slice(&self.inner_product_proof.L);
+        points.extend_from_slice(&self.inner_product_proof.R);
+        points.extend_from_slice(&ped_com);
+        points.push(self.T1);
+        points.push(self.T2);
+
+        let H_times_scalar_H = H * &ECScalar::from(&scalar_H);
+        let tot_len = points.len();
+        let lhs = (0..tot_len)
+            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
+            .fold(H_times_scalar_H, |acc, x| acc + x as GE);
+        
+        // single multi-exponentiation check
+        if lhs == self.A {
+            Ok(())
+        } else {
+            Err(RangeProofError)
+        }
+
+    }
 }
 
 pub fn generate_random_point(bytes: &[u8]) -> GE {
@@ -561,6 +800,53 @@ mod tests {
         
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
         let result = RangeProof::verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
+        assert!(result.is_ok());
+    }
+
+    pub fn test_helper_aggregated(
+        seed: &BigInt, 
+        n: usize, 
+        m: usize
+    ) {
+        let nm = n * m;
+        let G: GE = ECPoint::generator();
+        let label = BigInt::from(1);
+        let hash = HSha512::create_hash(&[&label]);
+        let H = generate_random_point(&Converter::to_vec(&hash));
+
+        let g_vec = (0..nm)
+            .map(|i| {
+                let kzen_label_i = BigInt::from(i as u32) + seed;
+                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                generate_random_point(&Converter::to_vec(&hash_i))
+            })
+            .collect::<Vec<GE>>();
+
+        // can run in parallel to g_vec:
+        let h_vec = (0..nm)
+            .map(|i| {
+                let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + seed;
+                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                generate_random_point(&Converter::to_vec(&hash_j))
+            })
+            .collect::<Vec<GE>>();
+
+        let range = BigInt::from(2).pow(n as u32);
+        let v_vec = (0..m)
+            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .collect::<Vec<FE>>();
+
+        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+
+        let ped_com_vec = (0..m)
+            .map(|i| {
+                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                ped_com
+            })
+            .collect::<Vec<GE>>();
+        
+        let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
+        let result = RangeProof::aggregated_verify(&range_proof, &g_vec, &h_vec, &G, &H, &ped_com_vec, n);
         assert!(result.is_ok());
     }
 
@@ -776,5 +1062,12 @@ mod tests {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
         test_helper(&kzen_label, 64, 4);
+    }
+
+    #[test]
+    pub fn test_agg_batch_4_range_proof_64(){
+        let KZen: &[u8] = &[75, 90, 101, 110];
+        let kzen_label = BigInt::from(KZen);
+        test_helper_aggregated(&kzen_label, 64, 4);
     }
 }
