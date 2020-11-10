@@ -21,7 +21,9 @@ use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-use curv::{FE, GE};
+type GE = curv::elliptic::curves::secp256_k1::GE;
+type FE = curv::elliptic::curves::secp256_k1::FE;
+
 
 use Errors::{self, InnerProductError};
 
@@ -267,7 +269,7 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = HSha256::create_hash_from_ge(&[&Li, &Ri, &ux]);
+            let x = HSha256::create_hash_from_ge::<GE>(&[Li, Ri, ux] as &[_]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
@@ -356,7 +358,8 @@ mod tests {
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
-    use curv::{FE, GE};
+    use curv::elliptic::curves::secp256_k1::GE;
+    use curv::elliptic::curves::secp256_k1::FE;
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
 

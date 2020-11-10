@@ -21,7 +21,9 @@ use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-use curv::{FE, GE};
+type GE = curv::elliptic::curves::secp256_k1::GE;
+type FE = curv::elliptic::curves::secp256_k1::FE;
+
 use itertools::iterate;
 use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
@@ -607,7 +609,7 @@ impl RangeProof {
             .iter()
             .zip(self.inner_product_proof.R.iter())
         {
-            let x = HSha256::create_hash_from_ge(&[&Li, &Ri, &ux]);
+            let x = HSha256::create_hash_from_ge::<GE>(&[&Li, &Ri, &ux]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
@@ -757,7 +759,9 @@ mod tests {
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
-    use curv::{FE, GE};
+    type GE = curv::elliptic::curves::secp256_k1::GE;
+type FE = curv::elliptic::curves::secp256_k1::FE;
+
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
 
