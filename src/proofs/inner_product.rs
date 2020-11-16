@@ -269,7 +269,7 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[Li, Ri, ux] as &[_]);
+            let x = HSha256::create_hash_from_ge::<GE>(&[Li, Ri, ux]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
