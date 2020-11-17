@@ -10,7 +10,7 @@ authors = [
 crate-type = ["lib"]
 
 [dependencies]
-curv = { git = "https://github.com/KZen-networks/curv" , tag = "v0.3.2"}
+curv = { git = "https://github.com/KZen-networks/curv" , tag = "v0.3.4"}
 
 itertools = "0.7.8"
 serde = "1.0"
