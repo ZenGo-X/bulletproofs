@@ -360,7 +360,7 @@ mod tests {
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
     use proofs::inner_product::InnerProductArg;
-    use proofs::test_utils::generate_random_point;
+    use proofs::utils::derive_point;
 
     fn test_helper<P>(n: usize)
     where
@@ -374,7 +374,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
             .collect::<Vec<P>>();
 
@@ -383,13 +383,13 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
             .collect::<Vec<P>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx: P = generate_random_point(&Converter::to_vec(&hash));
+        let Gx: P = derive_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -458,7 +458,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
             .collect::<Vec<P>>();
 
@@ -467,13 +467,13 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
             .collect::<Vec<P>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx: P = generate_random_point(&Converter::to_vec(&hash));
+        let Gx: P = derive_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -542,7 +542,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
             .collect::<Vec<P>>();
 
@@ -551,13 +551,13 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
             .collect::<Vec<P>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx: P = generate_random_point(&Converter::to_vec(&hash));
+        let Gx: P = derive_point(&Converter::to_vec(&hash));
 
         let c = super::inner_product(&a, &b, &P::Scalar::q());
 

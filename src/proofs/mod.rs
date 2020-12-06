@@ -15,10 +15,9 @@ version 3 of the License, or (at your option) any later version.
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 
-#[cfg(test)]
-mod test_utils;
-
 pub mod inner_product;
 pub mod range_proof;
-// pub mod range_proof_wip;
+pub mod range_proof_wip;
 pub mod weighted_inner_product;
+
+mod utils;

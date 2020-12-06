@@ -545,7 +545,7 @@ mod tests {
     use super::{weighted_inner_product, WeightedInnerProdArg};
     use crate::test_for_all_curves;
     use itertools::iterate;
-    use proofs::test_utils::generate_random_point;
+    use proofs::utils::derive_point;
 
     fn test_helper<P>(n: usize)
     where
@@ -559,7 +559,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
             .collect::<Vec<P>>();
 
@@ -568,16 +568,16 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
             .collect::<Vec<P>>();
 
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g: P = generate_random_point(&Converter::to_vec(&hash));
+        let g: P = derive_point(&Converter::to_vec(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h: P = generate_random_point(&Converter::to_vec(&hash));
+        let h: P = derive_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -657,7 +657,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
             .collect::<Vec<P>>();
 
@@ -666,16 +666,16 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
             .collect::<Vec<P>>();
 
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g: P = generate_random_point(&Converter::to_vec(&hash));
+        let g: P = derive_point(&Converter::to_vec(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h: P = generate_random_point(&Converter::to_vec(&hash));
+        let h: P = derive_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -755,7 +755,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
             .collect::<Vec<P>>();
 
@@ -764,17 +764,17 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
             .collect::<Vec<P>>();
 
         // generate g, h
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g: P = generate_random_point(&Converter::to_vec(&hash));
+        let g: P = derive_point(&Converter::to_vec(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h: P = generate_random_point(&Converter::to_vec(&hash));
+        let h: P = derive_point(&Converter::to_vec(&hash));
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
