@@ -28,56 +28,50 @@ use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
 
 use itertools::iterate;
-use proofs::range_proof::generate_random_point;
+use proofs::utils::derive_point;
 use proofs::weighted_inner_product::WeightedInnerProdArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct StatementRP {
-    pub g_vec: Vec<GE>,
-    pub h_vec: Vec<GE>,
-    pub G: GE,
-    pub H: GE,
+pub struct StatementRP<P: ECPoint> {
+    pub g_vec: Vec<P>,
+    pub h_vec: Vec<P>,
+    pub G: P,
+    pub H: P,
     pub bit_length: usize,
 }
 
-impl StatementRP {
-    pub fn generate_bases(
-        init_seed: &BigInt,
-        num_of_proofs: usize,
-        bit_length: usize,
-    ) -> StatementRP {
+impl<P: ECPoint> StatementRP<P> {
+    pub fn generate_bases(init_seed: &BigInt, num_of_proofs: usize, bit_length: usize) -> Self {
         let n = bit_length;
         let m = num_of_proofs;
         let nm = n * m;
 
         // G,H - points for pederson commitment: com  = vG + rH
-        let G: GE = ECPoint::generator();
-        let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &FE::q());
+        let G: P = ECPoint::generator();
+        let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &<P::Scalar as ECScalar>::q());
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = derive_point(&Converter::to_vec(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + init_seed;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..nm)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + init_seed;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         return StatementRP {
             g_vec,
@@ -90,13 +84,21 @@ impl StatementRP {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RangeProofWIP {
-    A: GE,
-    weighted_inner_product_proof: WeightedInnerProdArg,
+pub struct RangeProofWIP<P: ECPoint> {
+    A: P,
+    weighted_inner_product_proof: WeightedInnerProdArg<P>,
 }
 
-impl RangeProofWIP {
-    pub fn prove(stmt: StatementRP, mut secret: Vec<FE>, blinding: &[FE]) -> RangeProofWIP {
+impl<P> RangeProofWIP<P>
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
+{
+    pub fn prove(
+        stmt: StatementRP<P>,
+        mut secret: Vec<P::Scalar>,
+        blinding: &[P::Scalar],
+    ) -> RangeProofWIP<P> {
         let num_of_proofs = secret.len();
         let bit_length = stmt.bit_length;
         //num of proofs times bit length
@@ -110,7 +112,7 @@ impl RangeProofWIP {
         let N = g_vec.len();
         let two = BigInt::from(2);
         let one = BigInt::from(1);
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
 
         // All of the input vectors must have the same length.
         assert_eq!(h_vec.len(), N);
@@ -141,8 +143,8 @@ impl RangeProofWIP {
             .collect::<Vec<bool>>();
 
         // let mut index: usize = 0;
-        let alpha: FE = ECScalar::new_random();
-        let mut A = H * &alpha;
+        let alpha: P::Scalar = ECScalar::new_random();
+        let mut A = H.clone() * alpha.clone();
         A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if x.1 {
                 acc.add_point(&x.0.get_element())
@@ -160,8 +162,8 @@ impl RangeProofWIP {
 
         let y = HSha256::create_hash_from_ge(&[&A]);
         let y_bn = y.to_big_int();
-        let base_point: GE = ECPoint::generator();
-        let yG: GE = base_point * &y;
+        let base_point: P = ECPoint::generator();
+        let yG: P = base_point.clone() * y.clone();
         let z = HSha256::create_hash_from_ge(&[&A, &yG]);
         let z_bn = z.to_big_int();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
@@ -235,14 +237,14 @@ impl RangeProofWIP {
         A_hat_scalars.extend_from_slice(&scalars_h_vec);
         A_hat_scalars.extend_from_slice(&[scalar_G.clone(), scalar_H.clone()]);
 
-        let mut A_hat_bases: Vec<GE> = Vec::with_capacity(2 * nm + 2);
+        let mut A_hat_bases: Vec<P> = Vec::with_capacity(2 * nm + 2);
         A_hat_bases.extend_from_slice(&g_vec);
         A_hat_bases.extend_from_slice(&h_vec);
-        A_hat_bases.extend_from_slice(&[G, H]);
+        A_hat_bases.extend_from_slice(&[G.clone(), H.clone()]);
 
         let A_hat = (0..(2 * nm + 2))
-            .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
-            .fold(A.clone(), |acc, x| acc + x as GE);
+            .map(|i| A_hat_bases[i].clone() * ECScalar::from(&A_hat_scalars[i]))
+            .fold(A.clone(), |acc, x| acc + x as P);
 
         // compute aL_hat, aR_hat, alpha_hat
         let aL_hat = (0..nm)
@@ -267,7 +269,7 @@ impl RangeProofWIP {
         };
     }
 
-    pub fn verify(&self, stmt: StatementRP, ped_com: &[GE]) -> Result<(), Errors> {
+    pub fn verify(&self, stmt: StatementRP<P>, ped_com: &[P]) -> Result<(), Errors> {
         let bit_length = stmt.bit_length;
         let num_of_proofs = ped_com.len();
         let nm = num_of_proofs * bit_length;
@@ -279,12 +281,12 @@ impl RangeProofWIP {
 
         let two = BigInt::from(2);
         let one = BigInt::from(1);
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
 
         let y = HSha256::create_hash_from_ge(&[&self.A]);
         let y_bn = y.to_big_int();
-        let base_point: GE = ECPoint::generator();
-        let yG: GE = base_point * &y;
+        let base_point: P = ECPoint::generator();
+        let yG: P = base_point.clone() * y.clone();
         let z = HSha256::create_hash_from_ge(&[&self.A, &yG]);
         let z_bn = z.to_big_int();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
@@ -346,9 +348,9 @@ impl RangeProofWIP {
         let sum_com = (0..num_of_proofs)
             .map(|i| {
                 let y_pow_z2i = BigInt::mod_mul(&y_pow, &vec_z2m[i].clone(), &order);
-                ped_com[i] * &ECScalar::from(&y_pow_z2i)
+                ped_com[i].clone() * ECScalar::from(&y_pow_z2i)
             })
-            .fold(self.A, |acc, x| acc + x as GE);
+            .fold(self.A.clone(), |acc, x| acc + x as P);
 
         // compute A_hat
         let mut A_hat_scalars: Vec<BigInt> = Vec::with_capacity(2 * nm + 2);
@@ -356,14 +358,14 @@ impl RangeProofWIP {
         A_hat_scalars.extend_from_slice(&scalars_h_vec);
         A_hat_scalars.extend_from_slice(&[scalar_G.clone()]);
 
-        let mut A_hat_bases: Vec<GE> = Vec::with_capacity(2 * nm + 2);
+        let mut A_hat_bases: Vec<P> = Vec::with_capacity(2 * nm + 2);
         A_hat_bases.extend_from_slice(&g_vec);
         A_hat_bases.extend_from_slice(&h_vec);
-        A_hat_bases.extend_from_slice(&[G]);
+        A_hat_bases.extend_from_slice(&[G.clone()]);
 
         let A_hat = (0..(2 * nm + 1))
-            .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
-            .fold(sum_com.clone(), |acc, x| acc + x as GE);
+            .map(|i| A_hat_bases[i].clone() * ECScalar::from(&A_hat_scalars[i]))
+            .fold(sum_com.clone(), |acc, x| acc + x as P);
 
         let verify = self
             .weighted_inner_product_proof
@@ -379,9 +381,9 @@ impl RangeProofWIP {
     /// Verify a wip-based range proof in a using a single multi-exponentiation equation.
     /// The final check costs a multi-exponentiation of size (2mn + 2log(mn) + m + 5).
     ///
-    pub fn aggregated_verify(&self, stmt: StatementRP, ped_com: &[GE]) -> Result<(), Errors> {
+    pub fn aggregated_verify(&self, stmt: StatementRP<P>, ped_com: &[P]) -> Result<(), Errors> {
         let wip = &self.weighted_inner_product_proof;
-        let P = self.A;
+        let P = self.A.clone();
 
         let n = stmt.bit_length;
         let m = ped_com.len();
@@ -392,7 +394,7 @@ impl RangeProofWIP {
         let g = &stmt.G;
         let h = &stmt.H;
         // let n = stmt.bit_length;
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
         let lg_nm = wip.L.len();
         let two = BigInt::from(2);
         let one = BigInt::from(1);
@@ -409,8 +411,8 @@ impl RangeProofWIP {
         // compute challenges
         let y = HSha256::create_hash_from_ge(&[&self.A]);
         let y_bn = y.to_big_int();
-        let base_point: GE = ECPoint::generator();
-        let yG: GE = base_point * &y;
+        let base_point: P = ECPoint::generator();
+        let yG: P = base_point.clone() * y.clone();
         let z = HSha256::create_hash_from_ge(&[&self.A, &yG]);
         let z_bn = z.to_big_int();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
@@ -461,7 +463,7 @@ impl RangeProofWIP {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in wip.L.iter().zip(wip.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[&Li, &Ri, &g, &h]);
+            let x = HSha256::create_hash_from_ge::<P>(&[&Li, &Ri, &g, &h]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
@@ -573,21 +575,21 @@ impl RangeProofWIP {
         scalars.push(scalar_A);
 
         // compute concatenated base vector
-        let mut points: Vec<GE> = Vec::with_capacity(2 * nm + 2 * lg_nm + m + 5);
+        let mut points: Vec<P> = Vec::with_capacity(2 * nm + 2 * lg_nm + m + 5);
         points.extend_from_slice(G);
         points.extend_from_slice(H);
-        points.push(*g);
+        points.push(g.clone());
         points.extend_from_slice(&wip.L);
         points.extend_from_slice(&wip.R);
         points.push(P);
         points.extend_from_slice(&ped_com);
-        points.push(wip.a_tag);
+        points.push(wip.a_tag.clone());
 
-        let h_delta_prime = h * &ECScalar::from(&wip.delta_prime);
+        let h_delta_prime = h.clone() * ECScalar::from(&wip.delta_prime);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
-            .fold(h_delta_prime, |acc, x| acc + x as GE);
+            .map(|i| points[i].clone() * ECScalar::from(&scalars[i]))
+            .fold(h_delta_prime, |acc, x| acc + x as P);
 
         if lhs == wip.b_tag {
             Ok(())
@@ -602,31 +604,36 @@ mod tests {
     use curv::arithmetic::traits::Samplable;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
-    type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
 
+    use crate::test_for_all_curves;
     use proofs::range_proof_wip::{RangeProofWIP, StatementRP};
 
-    pub fn test_helper(seed: &BigInt, n: usize, m: usize) {
+    fn test_helper<P>(seed: &BigInt, n: usize, m: usize)
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         // generate stmt
-        let stmt = StatementRP::generate_bases(&seed, m, n);
+        let stmt = StatementRP::<P>::generate_bases(&seed, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = G.clone() * v_vec[i].clone() + H.clone() * r_vec[i].clone();
                 ped_com
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // simulate range proof
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
@@ -634,26 +641,32 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         assert!(result.is_ok());
     }
 
-    pub fn test_helper_aggregate(seed: &BigInt, n: usize, m: usize) {
+    fn test_helper_aggregate<P>(seed: &BigInt, n: usize, m: usize)
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         // generate stmt
-        let stmt = StatementRP::generate_bases(&seed, m, n);
+        let stmt = StatementRP::<P>::generate_bases(&seed, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = G.clone() * v_vec[i].clone() + H.clone() * r_vec[i].clone();
                 ped_com
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // simulate range proof
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
@@ -661,99 +674,129 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         assert!(result.is_ok());
     }
 
-    #[test]
-    pub fn test_batch_4_wip_range_proof_32() {
+    test_for_all_curves!(test_batch_4_wip_range_proof_32);
+    fn test_batch_4_wip_range_proof_32<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let n = 32;
         // num of proofs
         let m = 4;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        let stmt = StatementRP::generate_bases(&kzen_label, m, n);
+        let stmt = StatementRP::<P>::generate_bases(&kzen_label, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = G.clone() * v_vec[i].clone() + H.clone() * r_vec[i].clone();
                 ped_com
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
         let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
         assert!(result.is_ok());
     }
 
-    #[test]
-    #[should_panic]
-    pub fn test_batch_4_wip_range_proof_32_out_of_range() {
+    test_for_all_curves!(
+        #[should_panic]
+        test_batch_4_wip_range_proof_32_out_of_range
+    );
+    fn test_batch_4_wip_range_proof_32_out_of_range<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let n = 32;
         // num of proofs
         let m = 4;
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
-        let stmt = StatementRP::generate_bases(&kzen_label, m, n);
+        let stmt = StatementRP::<P>::generate_bases(&kzen_label, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(ECScalar::from(&bad_v));
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = G.clone() * v_vec[i].clone() + H.clone() * r_vec[i].clone();
                 ped_com
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
         let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
         assert!(result.is_ok());
     }
 
-    #[test]
-    pub fn test_batch_2_wip_range_proof_16() {
+    test_for_all_curves!(test_batch_2_wip_range_proof_16);
+    fn test_batch_2_wip_range_proof_16<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
-        test_helper(&kzen_label, 16, 2);
+        test_helper::<P>(&kzen_label, 16, 2);
     }
 
-    #[test]
-    pub fn test_batch_1_wip_range_proof_8() {
+    test_for_all_curves!(test_batch_1_wip_range_proof_8);
+    fn test_batch_1_wip_range_proof_8<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
-        test_helper(&kzen_label, 8, 1);
+        test_helper::<P>(&kzen_label, 8, 1);
     }
 
-    #[test]
-    pub fn test_batch_4_wip_range_proof_64() {
+    test_for_all_curves!(test_batch_4_wip_range_proof_64);
+    fn test_batch_4_wip_range_proof_64<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
-        test_helper(&kzen_label, 64, 4);
+        test_helper::<P>(&kzen_label, 64, 4);
     }
 
-    #[test]
-    pub fn test_batch_agg_4_wip_range_proof_64() {
+    test_for_all_curves!(test_batch_agg_4_wip_range_proof_64);
+    fn test_batch_agg_4_wip_range_proof_64<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
-        test_helper_aggregate(&kzen_label, 64, 4);
+        test_helper_aggregate::<P>(&kzen_label, 64, 4);
     }
 }
