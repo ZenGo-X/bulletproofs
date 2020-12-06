@@ -21,4 +21,4 @@ mod test_utils;
 pub mod inner_product;
 pub mod range_proof;
 // pub mod range_proof_wip;
-// pub mod weighted_inner_product;
+pub mod weighted_inner_product;

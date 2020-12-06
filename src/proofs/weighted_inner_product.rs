@@ -26,40 +26,42 @@ use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
 
 use itertools::iterate;
 
 use Errors::{self, WeightedInnerProdError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct WeightedInnerProdArg {
-    pub(super) L: Vec<GE>,
-    pub(super) R: Vec<GE>,
-    pub(super) a_tag: GE,
-    pub(super) b_tag: GE,
+pub struct WeightedInnerProdArg<P: ECPoint> {
+    pub(super) L: Vec<P>,
+    pub(super) R: Vec<P>,
+    pub(super) a_tag: P,
+    pub(super) b_tag: P,
     pub(super) r_prime: BigInt,
     pub(super) s_prime: BigInt,
     pub(super) delta_prime: BigInt,
 }
 
-impl WeightedInnerProdArg {
+impl<P> WeightedInnerProdArg<P>
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
+{
     pub fn prove(
-        G: &[GE],
-        H: &[GE],
-        g: &GE,
-        h: &GE,
-        P: &GE,
+        G: &[P],
+        H: &[P],
+        g: &P,
+        h: &P,
+        P: &P,
         a: &[BigInt],
         b: &[BigInt],
         alpha: &BigInt,
         y: &BigInt,
-        mut L_vec: Vec<GE>,
-        mut R_vec: Vec<GE>,
-    ) -> WeightedInnerProdArg {
+        mut L_vec: Vec<P>,
+        mut R_vec: Vec<P>,
+    ) -> Self {
         let n = G.len();
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -95,22 +97,22 @@ impl WeightedInnerProdArg {
                 .map(|i| BigInt::mod_mul(&powers_yinv[n - 1], &a_L[i], &order))
                 .collect::<Vec<BigInt>>();
 
-            let c_L = weighted_inner_product(&a_L, &b_R, y.clone());
-            let c_R = weighted_inner_product(&yn_aR, b_L, y.clone());
+            let c_L = weighted_inner_product(&a_L, &b_R, y.clone(), &<P::Scalar as ECScalar>::q());
+            let c_R = weighted_inner_product(&yn_aR, b_L, y.clone(), &<P::Scalar as ECScalar>::q());
 
             // Note that no element in vectors a_L and b_R can be 0
             // since 0 is an invalid secret key!
             //
             // L = <yninv_aL * G_R> + <b_R * H_L> + (c_L * g) + (d_L * h)
-            let c_L_fe: FE = ECScalar::from(&c_L);
-            let g_cL: GE = g * &c_L_fe;
-            let d_L_fe: FE = ECScalar::new_random();
-            let h_dL = h * &d_L_fe;
+            let c_L_fe: P::Scalar = ECScalar::from(&c_L);
+            let g_cL: P = g.clone() * c_L_fe.clone();
+            let d_L_fe: P::Scalar = ECScalar::new_random();
+            let h_dL = h.clone() * d_L_fe.clone();
             let g_cL_h_dL = g_cL.add_point(&h_dL.get_element());
             let yninv_aL_GR = G_R.iter().zip(yninv_aL.clone()).fold(g_cL_h_dL, |acc, x| {
                 if x.1 != BigInt::zero() {
-                    let aLi: FE = ECScalar::from(&x.1);
-                    let aLi_GRi: GE = x.0 * &aLi;
+                    let aLi: P::Scalar = ECScalar::from(&x.1);
+                    let aLi_GRi: P = x.0.clone() * aLi.clone();
                     acc.add_point(&aLi_GRi.get_element())
                 } else {
                     acc
@@ -118,8 +120,8 @@ impl WeightedInnerProdArg {
             });
             let L = H_L.iter().zip(b_R.clone()).fold(yninv_aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi: FE = ECScalar::from(&x.1);
-                    let bRi_HLi: GE = x.0 * &bRi;
+                    let bRi: P::Scalar = ECScalar::from(&x.1);
+                    let bRi_HLi: P = x.0.clone() * bRi.clone();
                     acc.add_point(&bRi_HLi.get_element())
                 } else {
                     acc
@@ -130,15 +132,15 @@ impl WeightedInnerProdArg {
             // since 0 is an invalid secret key!
             //
             // R = <yn_aR * G_R> + <b_R * H_L> + (c_R * g) + (d_R * h)
-            let c_R_fe: FE = ECScalar::from(&c_R);
-            let g_cR: GE = g * &c_R_fe;
-            let d_R_fe: FE = ECScalar::new_random();
-            let h_dR = h * &d_R_fe;
+            let c_R_fe: P::Scalar = ECScalar::from(&c_R);
+            let g_cR: P = g.clone() * c_R_fe.clone();
+            let d_R_fe: P::Scalar = ECScalar::new_random();
+            let h_dR = h.clone() * d_R_fe.clone();
             let g_cR_h_dR = g_cR.add_point(&h_dR.get_element());
             let aR_GL = G_L.iter().zip(yn_aR.clone()).fold(g_cR_h_dR, |acc, x| {
                 if x.1 != BigInt::zero() {
-                    let aRi: FE = ECScalar::from(&x.1);
-                    let aRi_GLi: GE = x.0 * &aRi;
+                    let aRi: P::Scalar = ECScalar::from(&x.1);
+                    let aRi_GLi: P = x.0.clone() * aRi.clone();
                     acc.add_point(&aRi_GLi.get_element())
                 } else {
                     acc
@@ -146,8 +148,8 @@ impl WeightedInnerProdArg {
             });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi: FE = ECScalar::from(&x.1);
-                    let bLi_HRi: GE = x.0 * &bLi;
+                    let bLi: P::Scalar = ECScalar::from(&x.1);
+                    let bLi_HRi: P = x.0.clone() * bLi.clone();
                     acc.add_point(&bLi_HRi.get_element())
                 } else {
                     acc
@@ -186,23 +188,23 @@ impl WeightedInnerProdArg {
             let alpha_hat = BigInt::mod_add(&alpha, &x2_dL_xinv2_dR, &order);
 
             let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
-            let x_yinv_fe = ECScalar::from(&x_yinv);
+            let x_yinv_fe: P::Scalar = ECScalar::from(&x_yinv);
             let G_hat = (0..n)
                 .map(|i| {
-                    let GLx_inv = &G_L[i] * &x_inv_fe;
-                    let GRx_yinv = &G_R[i] * &x_yinv_fe;
+                    let GLx_inv = G_L[i].clone() * x_inv_fe.clone();
+                    let GRx_yinv = G_R[i].clone() * x_yinv_fe.clone();
                     GRx_yinv + GLx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //   G = &mut G_hat[..];
 
             let H_hat = (0..n)
                 .map(|i| {
-                    let HLx = &H_L[i] * &x;
-                    let HRx_inv = &H_R[i] * &x_inv_fe;
+                    let HLx = H_L[i].clone() * x.clone();
+                    let HRx_inv = H_R[i].clone() * x_inv_fe.clone();
                     HLx + HRx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //    H = &mut H_hat[..];
 
             L_vec.push(L);
@@ -211,32 +213,32 @@ impl WeightedInnerProdArg {
                 &G_hat, &H_hat, &g, &h, &P, &a_hat, &b_hat, &alpha_hat, &y, L_vec, R_vec,
             );
         } else {
-            let r: FE = ECScalar::new_random();
+            let r: P::Scalar = ECScalar::new_random();
             let r_bn: BigInt = r.to_big_int();
-            let s: FE = ECScalar::new_random();
+            let s: P::Scalar = ECScalar::new_random();
             let s_bn: BigInt = s.to_big_int();
-            let delta: FE = ECScalar::new_random();
+            let delta: P::Scalar = ECScalar::new_random();
             let delta_bn: BigInt = delta.to_big_int();
-            let eta: FE = ECScalar::new_random();
+            let eta: P::Scalar = ECScalar::new_random();
             let eta_bn: BigInt = eta.to_big_int();
 
             // compute A
-            let Gr = &G[0] * &r;
-            let Hs = &H[0] * &s;
+            let Gr = G[0].clone() * r.clone();
+            let Hs = H[0].clone() * s.clone();
             let a_s = BigInt::mod_mul(&a[0], &s_bn, &order);
             let a_sy = BigInt::mod_mul(&a_s, &y, &order);
             let b_r = BigInt::mod_mul(&b[0], &r_bn, &order);
             let b_ry = BigInt::mod_mul(&b_r, &y, &order);
             let a_sy_b_ry = BigInt::mod_add(&a_sy, &b_ry, &order);
-            let g_a_sy_b_ry = g * &ECScalar::from(&a_sy_b_ry);
-            let h_delta = h * &delta;
+            let g_a_sy_b_ry = g.clone() * ECScalar::from(&a_sy_b_ry);
+            let h_delta = h.clone() * delta.clone();
             let A = Gr + Hs + g_a_sy_b_ry + h_delta;
 
             // compute B
             let r_s = BigInt::mod_mul(&r_bn, &s_bn, &order);
             let r_sy = BigInt::mod_mul(&y, &r_s, &order);
-            let g_r_sy = g * &ECScalar::from(&r_sy);
-            let h_eta = h * &eta;
+            let g_r_sy = g.clone() * ECScalar::from(&r_sy);
+            let h_eta = h.clone() * eta.clone();
             let B = g_r_sy + h_eta;
 
             // compute challenge e
@@ -270,17 +272,17 @@ impl WeightedInnerProdArg {
 
     pub fn verify(
         &self,
-        g_vec: &[GE],
-        hi_tag: &[GE],
-        g: &GE,
-        h: &GE,
-        P: &GE,
+        g_vec: &[P],
+        hi_tag: &[P],
+        g: &P,
+        h: &P,
+        P: &P,
         y: &BigInt,
     ) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -299,37 +301,37 @@ impl WeightedInnerProdArg {
 
             let x = HSha256::create_hash_from_ge(&[&self.L[0], &self.R[0], &g, &h]);
             let x_bn = x.to_big_int();
-            let order = FE::q();
+            let order = <P::Scalar as ECScalar>::q();
             let x_inv_fe = x.invert();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
-            let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
+            let x_sq_fe: P::Scalar = ECScalar::from(&x_sq_bn);
+            let x_inv_sq_fe: P::Scalar = ECScalar::from(&x_inv_sq_bn);
 
             let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
-            let x_yinv_fe = ECScalar::from(&x_yinv);
+            let x_yinv_fe: P::Scalar = ECScalar::from(&x_yinv);
             let G_hat = (0..n)
                 .map(|i| {
-                    let GLx_inv = &G_L[i] * &x_inv_fe;
-                    let GRx_yinv = &G_R[i] * &x_yinv_fe;
+                    let GLx_inv = G_L[i].clone() * x_inv_fe.clone();
+                    let GRx_yinv = G_R[i].clone() * x_yinv_fe.clone();
                     GRx_yinv + GLx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //   G = &mut G_hat[..];
 
             let H_hat = (0..n)
                 .map(|i| {
-                    let HLx = &H_L[i] * &x;
-                    let HRx_inv = &H_R[i] * &x_inv_fe;
+                    let HLx = H_L[i].clone() * x.clone();
+                    let HRx_inv = H_R[i].clone() * x_inv_fe.clone();
                     HLx + HRx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //    H = &mut H_hat[..];
 
-            let Lx_sq = &self.L[0] * &x_sq_fe;
-            let Rx_sq_inv = &self.R[0] * &x_inv_sq_fe;
-            let P_tag = Lx_sq + Rx_sq_inv + P;
+            let Lx_sq = self.L[0].clone() * x_sq_fe.clone();
+            let Rx_sq_inv = self.R[0].clone() * x_inv_sq_fe.clone();
+            let P_tag = Lx_sq + Rx_sq_inv + P.clone();
 
             let ip = WeightedInnerProdArg {
                 L: (&self.L[1..]).to_vec(),
@@ -347,23 +349,23 @@ impl WeightedInnerProdArg {
         let e = HSha256::create_hash_from_ge(&[&self.a_tag, &self.b_tag, &g, &h]);
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
-        let e_sq_fe: FE = ECScalar::from(&e_sq_bn);
+        let e_sq_fe: P::Scalar = ECScalar::from(&e_sq_bn);
 
         // left hand side of verification
         // LHS = e^2*P + e*A + B
-        let P_e2 = P * &e_sq_fe;
-        let Ae = self.a_tag * &e;
-        let left = P_e2 + Ae + self.b_tag;
+        let P_e2 = P.clone() * e_sq_fe.clone();
+        let Ae = self.a_tag.clone() * e.clone();
+        let left = P_e2 + Ae + self.b_tag.clone();
 
         // RHS = (er')*G + (es')*H + (r's'y)*g + (delta')*h
         let er_prime = BigInt::mod_mul(&e_bn, &self.r_prime, &order);
-        let Ger_prime = &G[0] * &ECScalar::from(&er_prime);
+        let Ger_prime = G[0].clone() * ECScalar::from(&er_prime);
         let es_prime = BigInt::mod_mul(&e_bn, &self.s_prime, &order);
-        let Hes_prime = &H[0] * &ECScalar::from(&es_prime);
+        let Hes_prime = H[0].clone() * ECScalar::from(&es_prime);
         let rs_prime = BigInt::mod_mul(&self.s_prime, &self.r_prime, &order);
         let yrs_prime = BigInt::mod_mul(&rs_prime, &y, &order);
-        let g_yrs_prime = g * &ECScalar::from(&yrs_prime);
-        let h_delta_prime = h * &ECScalar::from(&self.delta_prime);
+        let g_yrs_prime = g.clone() * ECScalar::from(&yrs_prime);
+        let h_delta_prime = h.clone() * ECScalar::from(&self.delta_prime);
         let right = Ger_prime + Hes_prime + g_yrs_prime + h_delta_prime;
 
         if left == right {
@@ -382,17 +384,17 @@ impl WeightedInnerProdArg {
     ///
     pub fn fast_verify(
         &self,
-        g_vec: &[GE],
-        hi_tag: &[GE],
-        g: &GE,
-        h: &GE,
-        P: &GE,
+        g_vec: &[P],
+        hi_tag: &[P],
+        g: &P,
+        h: &P,
+        P: &P,
         y: &BigInt,
     ) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -421,7 +423,7 @@ impl WeightedInnerProdArg {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[&Li, &Ri, &g, &h]);
+            let x = HSha256::create_hash_from_ge::<P>(&[&Li, &Ri, &g, &h]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
@@ -486,22 +488,22 @@ impl WeightedInnerProdArg {
         scalars.extend_from_slice(&minus_e_sq_x_inv_sq_vec);
         scalars.push(r_times_s_y);
 
-        let mut points: Vec<GE> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
+        let mut points: Vec<P> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
         points.extend_from_slice(g_vec);
         points.extend_from_slice(hi_tag);
         points.extend_from_slice(&self.L);
         points.extend_from_slice(&self.R);
-        points.push(*g);
+        points.push(g.clone());
 
-        let h_delta_prime = h * &ECScalar::from(&self.delta_prime);
+        let h_delta_prime = h.clone() * ECScalar::from(&self.delta_prime);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
-            .fold(h_delta_prime, |acc, x| acc + x as GE);
+            .map(|i| points[i].clone() * ECScalar::from(&scalars[i]))
+            .fold(h_delta_prime, |acc, x| acc + x as P);
 
-        let Ae = self.a_tag * &ECScalar::from(&e_bn);
-        let Pe_sq = P * &ECScalar::from(&e_sq_bn);
-        let rhs = Pe_sq + Ae + self.b_tag;
+        let Ae = self.a_tag.clone() * ECScalar::from(&e_bn);
+        let Pe_sq = P.clone() * ECScalar::from(&e_sq_bn);
+        let rhs = Pe_sq + Ae + self.b_tag.clone();
 
         if lhs == rhs {
             Ok(())
@@ -511,13 +513,12 @@ impl WeightedInnerProdArg {
     }
 }
 
-fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
+fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt, order: &BigInt) -> BigInt {
     assert_eq!(
         a.len(),
         b.len(),
         "weighted_inner_product(a,b): lengths of vectors do not match"
     );
-    let order = FE::q();
     let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
         .take(a.len())
         .collect::<Vec<BigInt>>();
@@ -540,15 +541,17 @@ mod tests {
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
-    type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
 
+    use super::{weighted_inner_product, WeightedInnerProdArg};
+    use crate::test_for_all_curves;
     use itertools::iterate;
-    use proofs::range_proof::generate_random_point;
-    use proofs::weighted_inner_product::weighted_inner_product;
-    use proofs::weighted_inner_product::WeightedInnerProdArg;
+    use proofs::test_utils::generate_random_point;
 
-    fn test_helper(n: usize) {
+    fn test_helper<P>(n: usize)
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -558,7 +561,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
@@ -567,68 +570,71 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g = generate_random_point(&Converter::to_vec(&hash));
+        let g: P = generate_random_point(&Converter::to_vec(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h = generate_random_point(&Converter::to_vec(&hash));
+        let h: P = generate_random_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
+        let c =
+            super::weighted_inner_product(&a, &b, y_scalar.clone(), &<P::Scalar as ECScalar>::q());
 
-        let alpha_fe: FE = ECScalar::new_random();
+        let alpha_fe: P::Scalar = ECScalar::new_random();
         let alpha = alpha_fe.to_big_int();
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y: P::Scalar = ECScalar::new_random();
+        let order = <P::Scalar as ECScalar>::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe: P::Scalar = ECScalar::from(&yi[i]);
                 yi_fe.invert()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
-        let g_c: GE = &g * &c_fe;
-        let h_alpha: GE = &h * &alpha_fe;
+        let c_fe: P::Scalar = ECScalar::from(&c);
+        let g_c: P = g.clone() * c_fe.clone();
+        let h_alpha: P = h.clone() * alpha_fe.clone();
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
-                &g_vec[i] * &ai
+                let ai: P::Scalar = ECScalar::from(&a[i]);
+                g_vec[i].clone() * ai.clone()
             })
-            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+            .fold(gc_halpha, |acc, x: P| acc + x as P);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
-                &hi_tag[i] * &bi
+                let bi: P::Scalar = ECScalar::from(&b[i]);
+                hi_tag[i].clone() * bi.clone()
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: P| acc + x as P);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -639,7 +645,11 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         assert!(verifier.is_ok())
     }
 
-    fn test_helper_fast_verify(n: usize) {
+    fn test_helper_fast_verify<P>(n: usize)
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -649,7 +659,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
@@ -658,68 +668,71 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g = generate_random_point(&Converter::to_vec(&hash));
+        let g: P = generate_random_point(&Converter::to_vec(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h = generate_random_point(&Converter::to_vec(&hash));
+        let h: P = generate_random_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
+        let c =
+            super::weighted_inner_product(&a, &b, y_scalar.clone(), &<P::Scalar as ECScalar>::q());
 
-        let alpha_fe: FE = ECScalar::new_random();
+        let alpha_fe: P::Scalar = ECScalar::new_random();
         let alpha = alpha_fe.to_big_int();
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y: P::Scalar = ECScalar::new_random();
+        let order = <P::Scalar as ECScalar>::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe: P::Scalar = ECScalar::from(&yi[i]);
                 yi_fe.invert()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
-        let g_c: GE = &g * &c_fe;
-        let h_alpha: GE = &h * &alpha_fe;
+        let c_fe: P::Scalar = ECScalar::from(&c);
+        let g_c: P = g.clone() * c_fe.clone();
+        let h_alpha: P = h.clone() * alpha_fe.clone();
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
-                &g_vec[i] * &ai
+                let ai: P::Scalar = ECScalar::from(&a[i]);
+                g_vec[i].clone() * ai.clone()
             })
-            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+            .fold(gc_halpha, |acc, x: P| acc + x as P);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
-                &hi_tag[i] * &bi
+                let bi: P::Scalar = ECScalar::from(&b[i]);
+                hi_tag[i].clone() * bi.clone()
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: P| acc + x as P);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -730,7 +743,11 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         assert!(verifier.is_ok())
     }
 
-    fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
+    fn test_helper_non_power_2<P>(m: usize, n: usize, a: &[BigInt], b: &[BigInt])
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -740,7 +757,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
                 generate_random_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
@@ -749,55 +766,58 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
                 generate_random_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // generate g, h
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g = generate_random_point(&Converter::to_vec(&hash));
+        let g: P = generate_random_point(&Converter::to_vec(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h = generate_random_point(&Converter::to_vec(&hash));
+        let h: P = generate_random_point(&Converter::to_vec(&hash));
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
+        let c =
+            super::weighted_inner_product(&a, &b, y_scalar.clone(), &<P::Scalar as ECScalar>::q());
 
-        let alpha_fe: FE = ECScalar::new_random();
+        let alpha_fe: P::Scalar = ECScalar::new_random();
         let alpha = alpha_fe.to_big_int();
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y: P::Scalar = ECScalar::new_random();
+        let order = <P::Scalar as ECScalar>::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe: P::Scalar = ECScalar::from(&yi[i]);
                 yi_fe.invert()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
-        let g_c: GE = &g * &c_fe;
-        let h_alpha: GE = &h * &alpha_fe;
+        let c_fe: P::Scalar = ECScalar::from(&c);
+        let g_c: P = g.clone() * c_fe.clone();
+        let h_alpha: P = h.clone() * alpha_fe.clone();
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..m)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
-                &g_vec[i] * &ai
+                let ai: P::Scalar = ECScalar::from(&a[i]);
+                g_vec[i].clone() * ai.clone()
             })
-            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+            .fold(gc_halpha, |acc, x: P| acc + x as P);
         let P = (0..m)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
-                &hi_tag[i] * &bi
+                let bi: P::Scalar = ECScalar::from(&b[i]);
+                hi_tag[i].clone() * bi.clone()
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: P| acc + x as P);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -808,8 +828,12 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         assert!(verifier.is_ok())
     }
 
-    #[test]
-    fn test_wip() {
+    test_for_all_curves!(test_wip);
+    fn test_wip<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let a: Vec<BigInt> = vec![
             BigInt::from(3),
             BigInt::from(2),
@@ -836,7 +860,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         ];
         assert_eq!(y_powers, expect_y_powers, "Scalar powers of y fails!");
 
-        let a_weighted_b = weighted_inner_product(&a, &b, y.clone());
+        let a_weighted_b = weighted_inner_product(&a, &b, y.clone(), &<P::Scalar as ECScalar>::q());
         assert_eq!(
             a_weighted_b,
             BigInt::from(46),
@@ -844,78 +868,130 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         );
     }
 
-    #[test]
-    fn make_wip_32() {
-        test_helper(32);
+    test_for_all_curves!(make_wip_32);
+    fn make_wip_32<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(32);
     }
 
-    #[test]
-    fn make_wip_16() {
-        test_helper(16);
+    test_for_all_curves!(make_wip_16);
+    fn make_wip_16<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(16);
     }
-    #[test]
-    fn make_wip_8() {
-        test_helper(8);
-    }
-
-    #[test]
-    fn make_wip_4() {
-        test_helper(4);
-    }
-
-    #[test]
-    fn make_wip_2() {
-        test_helper(2);
+    test_for_all_curves!(make_wip_8);
+    fn make_wip_8<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(8);
     }
 
-    #[test]
-    fn make_wip_1() {
-        test_helper(1);
+    test_for_all_curves!(make_wip_4);
+    fn make_wip_4<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(4);
     }
 
-    #[test]
-    fn make_wip_32_fast_verify() {
-        test_helper_fast_verify(32);
+    test_for_all_curves!(make_wip_2);
+    fn make_wip_2<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(2);
     }
 
-    #[test]
-    fn make_wip_16_fast_verify() {
-        test_helper_fast_verify(16);
-    }
-    #[test]
-    fn make_wip_8_fast_verify() {
-        test_helper_fast_verify(8);
-    }
-
-    #[test]
-    fn make_wip_4_fast_verify() {
-        test_helper_fast_verify(4);
+    test_for_all_curves!(make_wip_1);
+    fn make_wip_1<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(1);
     }
 
-    #[test]
-    fn make_wip_2_fast_verify() {
-        test_helper_fast_verify(2);
+    test_for_all_curves!(make_wip_32_fast_verify);
+    fn make_wip_32_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(32);
     }
 
-    #[test]
-    fn make_wip_1_fast_verify() {
-        test_helper_fast_verify(1);
+    test_for_all_curves!(make_wip_16_fast_verify);
+    fn make_wip_16_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(16);
+    }
+    test_for_all_curves!(make_wip_8_fast_verify);
+    fn make_wip_8_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(8);
     }
 
-    #[test]
-    fn make_wip_non_power_2() {
+    test_for_all_curves!(make_wip_4_fast_verify);
+    fn make_wip_4_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(4);
+    }
+
+    test_for_all_curves!(make_wip_2_fast_verify);
+    fn make_wip_2_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(2);
+    }
+
+    test_for_all_curves!(make_wip_1_fast_verify);
+    fn make_wip_1_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(1);
+    }
+
+    test_for_all_curves!(make_wip_non_power_2);
+    fn make_wip_non_power_2<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         // Create random scalar vectors a, b with size non-power of 2
         let n: usize = 9;
         let mut a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let mut b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
@@ -928,6 +1004,6 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         a.extend_from_slice(&zero_append_vec);
         b.extend_from_slice(&zero_append_vec);
 
-        test_helper_non_power_2(n, _n, &a, &b);
+        test_helper_non_power_2::<P>(n, _n, &a, &b);
     }
 }
