@@ -33,8 +33,9 @@ pub struct InnerProductArg<P: ECPoint> {
 }
 
 impl<P> InnerProductArg<P>
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     pub fn prove(
         G: &[P],
@@ -352,6 +353,7 @@ fn inner_product(a: &[BigInt], b: &[BigInt], order: &BigInt) -> BigInt {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_for_all_curves;
     use curv::arithmetic::traits::{Converter, Modulo};
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
@@ -359,11 +361,11 @@ mod tests {
     use curv::BigInt;
     use proofs::inner_product::InnerProductArg;
     use proofs::test_utils::generate_random_point;
-    use crate::test_for_all_curves;
 
     fn test_helper<P>(n: usize)
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
@@ -417,7 +419,9 @@ mod tests {
             })
             .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| h_vec[i].clone() * yi_inv[i].clone()).collect::<Vec<P>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: P::Scalar = ECScalar::from(&c);
@@ -443,8 +447,9 @@ mod tests {
     }
 
     fn test_helper_fast_verify<P>(n: usize)
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
@@ -498,7 +503,9 @@ mod tests {
             })
             .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| h_vec[i].clone() * yi_inv[i].clone()).collect::<Vec<P>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: P::Scalar = ECScalar::from(&c);
@@ -524,8 +531,9 @@ mod tests {
     }
 
     fn test_helper_non_power_2<P>(m: usize, n: usize, a: &[BigInt], b: &[BigInt])
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
@@ -566,7 +574,9 @@ mod tests {
             })
             .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| h_vec[i].clone() * yi_inv[i].clone()).collect::<Vec<P>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe: P::Scalar = ECScalar::from(&c);
@@ -595,104 +605,117 @@ mod tests {
 
     test_for_all_curves!(make_ipp_32);
     fn make_ipp_32<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper::<P>(32);
     }
 
     test_for_all_curves!(make_ipp_16);
     fn make_ipp_16<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper::<P>(16);
     }
 
     test_for_all_curves!(make_ipp_8);
     fn make_ipp_8<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper::<P>(8);
     }
 
     test_for_all_curves!(make_ipp_4);
     fn make_ipp_4<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper::<P>(4);
     }
 
     test_for_all_curves!(make_ipp_2);
     fn make_ipp_2<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper::<P>(2);
     }
 
     test_for_all_curves!(make_ipp_1);
     fn make_ipp_1<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper::<P>(1);
     }
 
     test_for_all_curves!(make_ipp_32_fast_verify);
     fn make_ipp_32_fast_verify<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper_fast_verify::<P>(32);
     }
 
     test_for_all_curves!(make_ipp_16_fast_verify);
     fn make_ipp_16_fast_verify<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper_fast_verify::<P>(16);
     }
 
     test_for_all_curves!(make_ipp_8_fast_verify);
     fn make_ipp_8_fast_verify<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper_fast_verify::<P>(8);
     }
 
     test_for_all_curves!(make_ipp_4_fast_verify);
     fn make_ipp_4_fast_verify<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper_fast_verify::<P>(4);
     }
 
     test_for_all_curves!(make_ipp_2_fast_verify);
     fn make_ipp_2_fast_verify<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper_fast_verify::<P>(2);
     }
 
     test_for_all_curves!(make_ipp_1_fast_verify);
     fn make_ipp_1_fast_verify<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         test_helper_fast_verify::<P>(1);
     }
 
     test_for_all_curves!(make_ipp_non_power_2);
     fn make_ipp_non_power_2<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         // Create random scalar vectors a, b with size non-power of 2
         let n: usize = 9;

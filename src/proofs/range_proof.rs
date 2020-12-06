@@ -40,8 +40,9 @@ pub struct RangeProof<P: ECPoint> {
 }
 
 impl<P> RangeProof<P>
-where P: ECPoint + Clone,
-      P::Scalar: Clone,
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
 {
     pub fn prove(
         g_vec: &[P],
@@ -106,8 +107,12 @@ where P: ECPoint + Clone,
             }
         });
 
-        let SR = (0..nm).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
-        let SL = (0..nm).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let SR = (0..nm)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
+        let SL = (0..nm)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         S = SL.iter().zip(&SR).fold(S, |acc, x| {
             let g_vec_i_SLi = g_vec[index].clone() * x.0.clone();
@@ -220,7 +225,9 @@ where P: ECPoint + Clone,
             })
             .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..nm).map(|i| h_vec[i].clone() * yi_inv[i].clone()).collect::<Vec<P>>();
+        let hi_tag = (0..nm)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // P' = P' g^l
         let P = g_vec.iter().zip(&Lp).fold(P, |acc, x| {
@@ -280,7 +287,9 @@ where P: ECPoint + Clone,
             .take(nm)
             .collect::<Vec<P::Scalar>>();
 
-        let scalar_mul_yn = yi.iter().fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
+        let scalar_mul_yn = yi
+            .iter()
+            .fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
         let scalar_mul_yn = scalar_mul_yn.to_big_int();
         let two = BigInt::from(2);
 
@@ -289,7 +298,9 @@ where P: ECPoint + Clone,
             .take(bit_length)
             .collect::<Vec<P::Scalar>>();
 
-        let scalar_mul_2n = vec_2n.iter().fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
+        let scalar_mul_2n = vec_2n
+            .iter()
+            .fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
         let scalar_mul_2n = scalar_mul_2n.to_big_int();
 
         let z_cubed_scalar_mul_2n = (0..num_of_proofs)
@@ -306,7 +317,9 @@ where P: ECPoint + Clone,
 
         let yi_inv = (0..nm).map(|i| yi[i].invert()).collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..nm).map(|i| h_vec[i].clone() * yi_inv[i].clone()).collect::<Vec<P>>();
+        let hi_tag = (0..nm)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         let fs_challenge = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
@@ -328,7 +341,9 @@ where P: ECPoint + Clone,
             })
             .collect::<Vec<P>>();
         let vec_ped_zm_1 = vec_ped_zm.remove(0);
-        let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x.clone());
+        let ped_com_sum = vec_ped_zm
+            .iter()
+            .fold(vec_ped_zm_1, |acc, x| acc + x.clone());
         let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
 
         let challenge_x = HSha256::create_hash(&[
@@ -341,7 +356,11 @@ where P: ECPoint + Clone,
         // P' = u^{xc}
 
         let P = Gx.clone() * self.tx.clone();
-        let minus_miu = BigInt::mod_sub(&<P::Scalar as ECScalar>::q(), &self.miu.to_big_int(), &<P::Scalar as ECScalar>::q());
+        let minus_miu = BigInt::mod_sub(
+            &<P::Scalar as ECScalar>::q(),
+            &self.miu.to_big_int(),
+            &<P::Scalar as ECScalar>::q(),
+        );
         let minus_miu_fe: P::Scalar = ECScalar::from(&minus_miu);
         let Hmiu = H.clone() * minus_miu_fe.clone();
         let Sx = self.S.clone() * fs_challenge.clone();
@@ -400,7 +419,9 @@ where P: ECPoint + Clone,
             .take(nm)
             .collect::<Vec<P::Scalar>>();
 
-        let scalar_mul_yn = yi.iter().fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
+        let scalar_mul_yn = yi
+            .iter()
+            .fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
         let scalar_mul_yn = scalar_mul_yn.to_big_int();
         let two = BigInt::from(2);
 
@@ -409,7 +430,9 @@ where P: ECPoint + Clone,
             .take(bit_length)
             .collect::<Vec<P::Scalar>>();
 
-        let scalar_mul_2n = vec_2n.iter().fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
+        let scalar_mul_2n = vec_2n
+            .iter()
+            .fold(<P::Scalar as ECScalar>::zero(), |acc, x| acc + x.clone());
         let scalar_mul_2n = scalar_mul_2n.to_big_int();
 
         let z_cubed_scalar_mul_2n = (0..num_of_proofs)
@@ -426,7 +449,9 @@ where P: ECPoint + Clone,
 
         let yi_inv = (0..nm).map(|i| yi[i].invert()).collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..nm).map(|i| h_vec[i].clone() * yi_inv[i].clone()).collect::<Vec<P>>();
+        let hi_tag = (0..nm)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         let fs_challenge = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
@@ -448,7 +473,9 @@ where P: ECPoint + Clone,
             })
             .collect::<Vec<P>>();
         let vec_ped_zm_1 = vec_ped_zm.remove(0);
-        let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x.clone());
+        let ped_com_sum = vec_ped_zm
+            .iter()
+            .fold(vec_ped_zm_1, |acc, x| acc + x.clone());
         let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
 
         let challenge_x = HSha256::create_hash(&[
@@ -461,7 +488,11 @@ where P: ECPoint + Clone,
         // P' = u^{xc}
 
         let P = Gx.clone() * self.tx.clone();
-        let minus_miu = BigInt::mod_sub(&<P::Scalar as ECScalar>::q(), &self.miu.to_big_int(), &<P::Scalar as ECScalar>::q());
+        let minus_miu = BigInt::mod_sub(
+            &<P::Scalar as ECScalar>::q(),
+            &self.miu.to_big_int(),
+            &<P::Scalar as ECScalar>::q(),
+        );
         let minus_miu_fe: P::Scalar = ECScalar::from(&minus_miu);
         let Hmiu = H.clone() * minus_miu_fe.clone();
         let Sx = self.S.clone() * fs_challenge.clone();
@@ -748,12 +779,13 @@ mod tests {
     use curv::BigInt;
 
     use super::RangeProof;
-    use proofs::test_utils::generate_random_point;
     use crate::test_for_all_curves;
+    use proofs::test_utils::generate_random_point;
 
     fn test_helper<P>(seed: &BigInt, n: usize, m: usize)
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let nm = n * m;
         let G: P = ECPoint::generator();
@@ -783,7 +815,9 @@ mod tests {
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
             .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -798,8 +832,9 @@ mod tests {
     }
 
     fn test_helper_aggregated<P>(seed: &BigInt, n: usize, m: usize)
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let nm = n * m;
         let G: P = ECPoint::generator();
@@ -829,7 +864,9 @@ mod tests {
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
             .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -846,8 +883,9 @@ mod tests {
 
     test_for_all_curves!(test_batch_4_range_proof_32);
     fn test_batch_4_range_proof_32<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let n = 32;
         // num of proofs
@@ -883,7 +921,9 @@ mod tests {
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
             .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -897,10 +937,14 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    test_for_all_curves!(#[should_panic] test_batch_4_range_proof_32_out_of_range);
+    test_for_all_curves!(
+        #[should_panic]
+        test_batch_4_range_proof_32_out_of_range
+    );
     fn test_batch_4_range_proof_32_out_of_range<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let n = 32;
         // num of proofs
@@ -939,7 +983,9 @@ mod tests {
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(ECScalar::from(&bad_v));
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -955,8 +1001,9 @@ mod tests {
 
     test_for_all_curves!(test_batch_2_range_proof_16);
     fn test_batch_2_range_proof_16<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let n = 16;
         // num of proofs
@@ -992,7 +1039,9 @@ mod tests {
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
             .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -1008,8 +1057,9 @@ mod tests {
 
     test_for_all_curves!(test_batch_1_range_proof_8);
     fn test_batch_1_range_proof_8<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         // bit range
         let n = 8;
@@ -1048,7 +1098,9 @@ mod tests {
             .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
             .collect::<Vec<P::Scalar>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<P::Scalar>>();
+        let r_vec = (0..m)
+            .map(|_| ECScalar::new_random())
+            .collect::<Vec<P::Scalar>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -1064,8 +1116,9 @@ mod tests {
 
     test_for_all_curves!(test_batch_4_range_proof_64);
     fn test_batch_4_range_proof_64<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
@@ -1074,8 +1127,9 @@ mod tests {
 
     test_for_all_curves!(test_agg_batch_4_range_proof_64);
     fn test_agg_batch_4_range_proof_64<P>()
-    where P: ECPoint + Clone,
-          P::Scalar: Clone,
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
     {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
