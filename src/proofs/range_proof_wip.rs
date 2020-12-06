@@ -603,9 +603,9 @@ where
 mod tests {
     use curv::arithmetic::traits::Samplable;
     use curv::elliptic::curves::traits::*;
+    use curv::test_for_all_curves;
     use curv::BigInt;
 
-    use crate::test_for_all_curves;
     use proofs::range_proof_wip::{RangeProofWIP, StatementRP};
 
     fn test_helper<P>(seed: &BigInt, n: usize, m: usize)

@@ -353,11 +353,11 @@ fn inner_product(a: &[BigInt], b: &[BigInt], order: &BigInt) -> BigInt {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_for_all_curves;
     use curv::arithmetic::traits::{Converter, Modulo};
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
+    use curv::test_for_all_curves;
     use curv::BigInt;
     use proofs::inner_product::InnerProductArg;
     use proofs::utils::derive_point;

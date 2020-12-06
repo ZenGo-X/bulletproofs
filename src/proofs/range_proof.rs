@@ -776,10 +776,10 @@ mod tests {
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
+    use curv::test_for_all_curves;
     use curv::BigInt;
 
     use super::RangeProof;
-    use crate::test_for_all_curves;
     use proofs::utils::derive_point;
 
     fn test_helper<P>(seed: &BigInt, n: usize, m: usize)

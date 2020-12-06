@@ -540,10 +540,10 @@ mod tests {
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
+    use curv::test_for_all_curves;
     use curv::BigInt;
 
     use super::{weighted_inner_product, WeightedInnerProdArg};
-    use crate::test_for_all_curves;
     use itertools::iterate;
     use proofs::utils::derive_point;
 
