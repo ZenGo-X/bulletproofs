@@ -21,31 +21,32 @@ use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
-
 
 use Errors::{self, InnerProductError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct InnerProductArg {
-    pub(super) L: Vec<GE>,
-    pub(super) R: Vec<GE>,
+pub struct InnerProductArg<P: ECPoint> {
+    pub(super) L: Vec<P>,
+    pub(super) R: Vec<P>,
     pub(super) a_tag: BigInt,
     pub(super) b_tag: BigInt,
 }
 
-impl InnerProductArg {
+impl<P> InnerProductArg<P>
+where
+    P: ECPoint + Clone,
+    P::Scalar: Clone,
+{
     pub fn prove(
-        G: &[GE],
-        H: &[GE],
-        ux: &GE,
-        P: &GE,
+        G: &[P],
+        H: &[P],
+        ux: &P,
+        P: &P,
         a: &[BigInt],
         b: &[BigInt],
-        mut L_vec: Vec<GE>,
-        mut R_vec: Vec<GE>,
-    ) -> InnerProductArg {
+        mut L_vec: Vec<P>,
+        mut R_vec: Vec<P>,
+    ) -> InnerProductArg<P> {
         let n = G.len();
 
         // All of the input vectors must have the same length.
@@ -64,19 +65,19 @@ impl InnerProductArg {
             let (G_L, G_R) = G.split_at(n);
             let (H_L, H_R) = H.split_at(n);
 
-            let c_L = inner_product(&a_L, &b_R);
-            let c_R = inner_product(&a_R, &b_L);
+            let c_L = inner_product(&a_L, &b_R, &P::Scalar::q());
+            let c_R = inner_product(&a_R, &b_L, &P::Scalar::q());
 
             // Note that no element in vectors a_L and b_R can be 0
             // since 0 is an invalid secret key!
             //
             // L = <a_L * G_R> + <b_R * H_L> + c_L * ux
-            let c_L_fe: FE = ECScalar::from(&c_L);
-            let ux_CL: GE = ux * &c_L_fe;
+            let c_L_fe: P::Scalar = ECScalar::from(&c_L);
+            let ux_CL: P = ux.clone() * c_L_fe.clone();
             let aL_GR = G_R.iter().zip(a_L.clone()).fold(ux_CL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let aLi: FE = ECScalar::from(&x.1);
-                    let aLi_GRi: GE = x.0 * &aLi;
+                    let aLi: P::Scalar = ECScalar::from(&x.1);
+                    let aLi_GRi: P = x.0.clone() * aLi;
                     acc.add_point(&aLi_GRi.get_element())
                 } else {
                     acc
@@ -84,8 +85,8 @@ impl InnerProductArg {
             });
             let L = H_L.iter().zip(b_R.clone()).fold(aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi: FE = ECScalar::from(&x.1);
-                    let bRi_HLi: GE = x.0 * &bRi;
+                    let bRi: P::Scalar = ECScalar::from(&x.1);
+                    let bRi_HLi: P = x.0.clone() * bRi;
                     acc.add_point(&bRi_HLi.get_element())
                 } else {
                     acc
@@ -96,12 +97,12 @@ impl InnerProductArg {
             // since 0 is an invalid secret key!
             //
             // R = <a_R * G_L> + <b_L * H_R> + c_R * ux
-            let c_R_fe: FE = ECScalar::from(&c_R);
-            let ux_CR: GE = ux * &c_R_fe;
+            let c_R_fe: P::Scalar = ECScalar::from(&c_R);
+            let ux_CR: P = ux.clone() * c_R_fe;
             let aR_GL = G_L.iter().zip(a_R.clone()).fold(ux_CR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let aRi: FE = ECScalar::from(&x.1);
-                    let aRi_GLi: GE = x.0 * &aRi;
+                    let aRi: P::Scalar = ECScalar::from(&x.1);
+                    let aRi_GLi: P = x.0.clone() * aRi;
                     acc.add_point(&aRi_GLi.get_element())
                 } else {
                     acc
@@ -109,8 +110,8 @@ impl InnerProductArg {
             });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi: FE = ECScalar::from(&x.1);
-                    let bLi_HRi: GE = x.0 * &bLi;
+                    let bLi: P::Scalar = ECScalar::from(&x.1);
+                    let bLi_HRi: P = x.0.clone() * bLi;
                     acc.add_point(&bLi_HRi.get_element())
                 } else {
                     acc
@@ -119,7 +120,7 @@ impl InnerProductArg {
 
             let x = HSha256::create_hash_from_ge(&[&L, &R, &ux]);
             let x_bn = x.to_big_int();
-            let order = FE::q();
+            let order = <P::Scalar as ECScalar>::q();
             let x_inv_fe = x.invert();
 
             let a_new = (0..n)
@@ -142,20 +143,20 @@ impl InnerProductArg {
 
             let G_new = (0..n)
                 .map(|i| {
-                    let GLx_inv = &G_L[i] * &x_inv_fe;
-                    let GRx = &G_R[i] * &x;
+                    let GLx_inv = G_L[i].clone() * x_inv_fe.clone();
+                    let GRx = G_R[i].clone() * x.clone();
                     GRx + GLx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //   G = &mut G_new[..];
 
             let H_new = (0..n)
                 .map(|i| {
-                    let HLx = &H_L[i] * &x;
-                    let HRx_inv = &H_R[i] * &x_inv_fe;
+                    let HLx = H_L[i].clone() * x.clone();
+                    let HRx_inv = H_R[i].clone() * x_inv_fe.clone();
                     HLx + HRx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //    H = &mut H_new[..];
 
             L_vec.push(L);
@@ -171,7 +172,7 @@ impl InnerProductArg {
         }
     }
 
-    pub fn verify(&self, g_vec: &[GE], hi_tag: &[GE], ux: &GE, P: &GE) -> Result<(), Errors> {
+    pub fn verify(&self, g_vec: &[P], hi_tag: &[P], ux: &P, P: &P) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
@@ -188,34 +189,34 @@ impl InnerProductArg {
 
             let x = HSha256::create_hash_from_ge(&[&self.L[0], &self.R[0], &ux]);
             let x_bn = x.to_big_int();
-            let order = FE::q();
+            let order = <P::Scalar as ECScalar>::q();
             let x_inv_fe = x.invert();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
-            let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
+            let x_sq_fe: P::Scalar = ECScalar::from(&x_sq_bn);
+            let x_inv_sq_fe: P::Scalar = ECScalar::from(&x_inv_sq_bn);
 
             let G_new = (0..n)
                 .map(|i| {
-                    let GLx_inv = &G_L[i] * &x_inv_fe;
-                    let GRx = &G_R[i] * &x;
+                    let GLx_inv = G_L[i].clone() * x_inv_fe.clone();
+                    let GRx = G_R[i].clone() * x.clone();
                     GRx + GLx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //   G = &mut G_new[..];
 
             let H_new = (0..n)
                 .map(|i| {
-                    let HLx = &H_L[i] * &x;
-                    let HRx_inv = &H_R[i] * &x_inv_fe;
+                    let HLx = H_L[i].clone() * x.clone();
+                    let HRx_inv = H_R[i].clone() * x_inv_fe.clone();
                     HLx + HRx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<P>>();
             //    H = &mut H_new[..];
-            let Lx_sq = &self.L[0] * &x_sq_fe;
-            let Rx_sq_inv = &self.R[0] * &x_inv_sq_fe;
-            let P_tag = Lx_sq + Rx_sq_inv + P;
+            let Lx_sq = self.L[0].clone() * x_sq_fe.clone();
+            let Rx_sq_inv = self.R[0].clone() * x_inv_sq_fe.clone();
+            let P_tag = Lx_sq + Rx_sq_inv + P.clone();
             let ip = InnerProductArg {
                 L: (&self.L[1..]).to_vec(),
                 R: (&self.R[1..]).to_vec(),
@@ -225,12 +226,12 @@ impl InnerProductArg {
             return ip.verify(&G_new, &H_new, ux, &P_tag);
         }
 
-        let a_fe: FE = ECScalar::from(&self.a_tag);
-        let b_fe: FE = ECScalar::from(&self.b_tag);
+        let a_fe: P::Scalar = ECScalar::from(&self.a_tag);
+        let b_fe: P::Scalar = ECScalar::from(&self.b_tag);
         let c = a_fe.mul(&b_fe.get_element());
-        let Ga = &G[0] * &a_fe;
-        let Hb = &H[0] * &b_fe;
-        let ux_c = ux * &c;
+        let Ga = G[0].clone() * a_fe.clone();
+        let Hb = H[0].clone() * b_fe.clone();
+        let ux_c = ux.clone() * c.clone();
         let P_calc = Ga + Hb + ux_c;
         if P.clone() == P_calc {
             Ok(())
@@ -246,11 +247,11 @@ impl InnerProductArg {
     /// Uses a single multiexponentiation (multiscalar multiplication in additive notation)
     /// check to verify an inner product proof.
     ///
-    pub fn fast_verify(&self, g_vec: &[GE], hi_tag: &[GE], ux: &GE, P: &GE) -> Result<(), Errors> {
+    pub fn fast_verify(&self, g_vec: &[P], hi_tag: &[P], ux: &P, P: &P) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
-        let order = FE::q();
+        let order = <P::Scalar as ECScalar>::q();
 
         // All of the input vectors must have the same length.
         assert_eq!(G.len(), n);
@@ -269,7 +270,7 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[Li, Ri, ux]);
+            let x = HSha256::create_hash_from_ge::<P>(&[Li, Ri, ux]);
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
@@ -313,20 +314,20 @@ impl InnerProductArg {
         scalars.extend_from_slice(&minus_x_sq_vec);
         scalars.extend_from_slice(&minus_x_inv_sq_vec);
 
-        let mut points: Vec<GE> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
+        let mut points: Vec<P> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
         points.extend_from_slice(g_vec);
         points.extend_from_slice(hi_tag);
         points.extend_from_slice(&self.L);
         points.extend_from_slice(&self.R);
 
         let c = BigInt::mod_mul(&self.a_tag, &self.b_tag, &order);
-        let ux_c = ux * &ECScalar::from(&c);
+        let ux_c = ux.clone() * ECScalar::from(&c);
 
         let tot_len = points.len();
 
         let expect_P = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
-            .fold(ux_c, |acc, x| acc + x as GE);
+            .map(|i| points[i].clone() * ECScalar::from(&scalars[i]))
+            .fold(ux_c, |acc, x| acc + x as P);
 
         if *P == expect_P {
             Ok(())
@@ -336,17 +337,16 @@ impl InnerProductArg {
     }
 }
 
-fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
+fn inner_product(a: &[BigInt], b: &[BigInt], order: &BigInt) -> BigInt {
     assert_eq!(
         a.len(),
         b.len(),
         "inner_product(a,b): lengths of vectors do not match"
     );
     let out = BigInt::zero();
-    let order = FE::q();
     let out = a.iter().zip(b).fold(out, |acc, x| {
-        let aibi = BigInt::mod_mul(x.0, x.1, &order);
-        BigInt::mod_add(&acc, &aibi, &order)
+        let aibi = BigInt::mod_mul(x.0, x.1, order);
+        BigInt::mod_add(&acc, &aibi, order)
     });
     return out;
 }
@@ -357,13 +357,16 @@ mod tests {
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
+    use curv::test_for_all_curves;
     use curv::BigInt;
-    use curv::elliptic::curves::secp256_k1::GE;
-    use curv::elliptic::curves::secp256_k1::FE;
     use proofs::inner_product::InnerProductArg;
-    use proofs::range_proof::generate_random_point;
+    use proofs::utils::derive_point;
 
-    fn test_helper(n: usize) {
+    fn test_helper<P>(n: usize)
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -371,68 +374,70 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx = generate_random_point(&Converter::to_vec(&hash));
+        let Gx: P = derive_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
-        let c = super::inner_product(&a, &b);
+        let c = super::inner_product(&a, &b, &P::Scalar::q());
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y: P::Scalar = ECScalar::new_random();
+        let order = <P::Scalar as ECScalar>::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe: P::Scalar = ECScalar::from(&yi[i]);
                 yi_fe.invert()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
-        let c_fe: FE = ECScalar::from(&c);
-        let ux_c: GE = &Gx * &c_fe;
+        let c_fe: P::Scalar = ECScalar::from(&c);
+        let ux_c: P = Gx.clone() * c_fe.clone();
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
-                &g_vec[i] * &ai
+                let ai: P::Scalar = ECScalar::from(&a[i]);
+                g_vec[i].clone() * ai.clone()
             })
-            .fold(ux_c, |acc, x: GE| acc + x as GE);
+            .fold(ux_c, |acc, x: P| acc + x as P);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
-                &hi_tag[i] * &bi
+                let bi: P::Scalar = ECScalar::from(&b[i]);
+                hi_tag[i].clone() * bi.clone()
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: P| acc + x as P);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -441,7 +446,11 @@ mod tests {
         assert!(verifier.is_ok())
     }
 
-    fn test_helper_fast_verify(n: usize) {
+    fn test_helper_fast_verify<P>(n: usize)
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -449,68 +458,70 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx = generate_random_point(&Converter::to_vec(&hash));
+        let Gx: P = derive_point(&Converter::to_vec(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
-        let c = super::inner_product(&a, &b);
+        let c = super::inner_product(&a, &b, &P::Scalar::q());
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y: P::Scalar = ECScalar::new_random();
+        let order = <P::Scalar as ECScalar>::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe: P::Scalar = ECScalar::from(&yi[i]);
                 yi_fe.invert()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
-        let c_fe: FE = ECScalar::from(&c);
-        let ux_c: GE = &Gx * &c_fe;
+        let c_fe: P::Scalar = ECScalar::from(&c);
+        let ux_c: P = Gx.clone() * c_fe.clone();
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
-                &g_vec[i] * &ai
+                let ai: P::Scalar = ECScalar::from(&a[i]);
+                g_vec[i].clone() * ai.clone()
             })
-            .fold(ux_c, |acc, x: GE| acc + x as GE);
+            .fold(ux_c, |acc, x: P| acc + x as P);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
-                &hi_tag[i] * &bi
+                let bi: P::Scalar = ECScalar::from(&b[i]);
+                hi_tag[i].clone() * bi.clone()
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: P| acc + x as P);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -519,7 +530,11 @@ mod tests {
         assert!(verifier.is_ok())
     }
 
-    fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
+    fn test_helper_non_power_2<P>(m: usize, n: usize, a: &[BigInt], b: &[BigInt])
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from(KZen);
 
@@ -527,57 +542,59 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                derive_point(&Converter::to_vec(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                derive_point(&Converter::to_vec(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<P>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx = generate_random_point(&Converter::to_vec(&hash));
+        let Gx: P = derive_point(&Converter::to_vec(&hash));
 
-        let c = super::inner_product(&a, &b);
+        let c = super::inner_product(&a, &b, &P::Scalar::q());
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y: P::Scalar = ECScalar::new_random();
+        let order = <P::Scalar as ECScalar>::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe: P::Scalar = ECScalar::from(&yi[i]);
                 yi_fe.invert()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<P::Scalar>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| h_vec[i].clone() * yi_inv[i].clone())
+            .collect::<Vec<P>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe: P::Scalar = ECScalar::from(&c);
 
-        let ux_c: GE = &Gx * &c_fe;
+        let ux_c: P = Gx.clone() * c_fe.clone();
 
         let a_G = (0..m)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
-                &g_vec[i] * &ai
+                let ai: P::Scalar = ECScalar::from(&a[i]);
+                g_vec[i].clone() * ai.clone()
             })
-            .fold(ux_c, |acc, x: GE| acc + x as GE);
+            .fold(ux_c, |acc, x: P| acc + x as P);
         let P = (0..m)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
-                &hi_tag[i] * &bi
+                let bi: P::Scalar = ECScalar::from(&b[i]);
+                hi_tag[i].clone() * bi.clone()
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: P| acc + x as P);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -586,78 +603,132 @@ mod tests {
         assert!(verifier.is_ok())
     }
 
-    #[test]
-    fn make_ipp_32() {
-        test_helper(32);
+    test_for_all_curves!(make_ipp_32);
+    fn make_ipp_32<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(32);
     }
 
-    #[test]
-    fn make_ipp_16() {
-        test_helper(16);
-    }
-    #[test]
-    fn make_ipp_8() {
-        test_helper(8);
-    }
-
-    #[test]
-    fn make_ipp_4() {
-        test_helper(4);
+    test_for_all_curves!(make_ipp_16);
+    fn make_ipp_16<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(16);
     }
 
-    #[test]
-    fn make_ipp_2() {
-        test_helper(2);
+    test_for_all_curves!(make_ipp_8);
+    fn make_ipp_8<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(8);
     }
 
-    #[test]
-    fn make_ipp_1() {
-        test_helper(1);
+    test_for_all_curves!(make_ipp_4);
+    fn make_ipp_4<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(4);
     }
 
-    #[test]
-    fn make_ipp_32_fast_verify() {
-        test_helper_fast_verify(32);
+    test_for_all_curves!(make_ipp_2);
+    fn make_ipp_2<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(2);
     }
 
-    #[test]
-    fn make_ipp_16_fast_verify() {
-        test_helper_fast_verify(16);
-    }
-    #[test]
-    fn make_ipp_8_fast_verify() {
-        test_helper_fast_verify(8);
-    }
-
-    #[test]
-    fn make_ipp_4_fast_verify() {
-        test_helper_fast_verify(4);
+    test_for_all_curves!(make_ipp_1);
+    fn make_ipp_1<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper::<P>(1);
     }
 
-    #[test]
-    fn make_ipp_2_fast_verify() {
-        test_helper_fast_verify(2);
+    test_for_all_curves!(make_ipp_32_fast_verify);
+    fn make_ipp_32_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(32);
     }
 
-    #[test]
-    fn make_ipp_1_fast_verify() {
-        test_helper_fast_verify(1);
+    test_for_all_curves!(make_ipp_16_fast_verify);
+    fn make_ipp_16_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(16);
     }
 
-    #[test]
-    fn make_ipp_non_power_2() {
+    test_for_all_curves!(make_ipp_8_fast_verify);
+    fn make_ipp_8_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(8);
+    }
+
+    test_for_all_curves!(make_ipp_4_fast_verify);
+    fn make_ipp_4_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(4);
+    }
+
+    test_for_all_curves!(make_ipp_2_fast_verify);
+    fn make_ipp_2_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(2);
+    }
+
+    test_for_all_curves!(make_ipp_1_fast_verify);
+    fn make_ipp_1_fast_verify<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
+        test_helper_fast_verify::<P>(1);
+    }
+
+    test_for_all_curves!(make_ipp_non_power_2);
+    fn make_ipp_non_power_2<P>()
+    where
+        P: ECPoint + Clone,
+        P::Scalar: Clone,
+    {
         // Create random scalar vectors a, b with size non-power of 2
         let n: usize = 9;
         let mut a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
 
         let mut b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: P::Scalar = ECScalar::new_random();
                 rand.to_big_int()
             })
             .collect();
@@ -673,6 +744,6 @@ mod tests {
         // let mut padded_b = b.clone();
         b.extend_from_slice(&zero_append_vec);
 
-        test_helper_non_power_2(n, _n, &a, &b);
+        test_helper_non_power_2::<P>(n, _n, &a, &b);
     }
 }
