@@ -21,11 +21,13 @@ version 3 of the License, or (at your option) any later version.
 // Bulletproofs+ (https://eprint.iacr.org/2020/735.pdf) uses the weighted inner product argument
 // which reduces the overall prover communication by ~15%
 //
-use curv::arithmetic::traits::Modulo;
+
+use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
 
@@ -68,7 +70,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let y_inv = BigInt::mod_inv(&y, &order);
+        let y_inv = BigInt::mod_inv(&y, &order).unwrap();
         let powers_y = iterate(y.clone(), |i| i.clone() * y)
             .take(n)
             .collect::<Vec<BigInt>>();
@@ -159,7 +161,7 @@ impl WeightedInnerProdArg {
             let x = HSha256::create_hash_from_ge(&[&L, &R, &g, &h]);
             let x_bn = x.to_big_int();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_sq_inv_bn = BigInt::mod_inv(&x_sq_bn, &order);
+            let x_sq_inv_bn = BigInt::mod_inv(&x_sq_bn, &order).unwrap();
             let x_inv_fe = x.invert();
 
             let a_hat = (0..n)
@@ -287,7 +289,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let y_inv = BigInt::mod_inv(&y, &order);
+        let y_inv = BigInt::mod_inv(&y, &order).unwrap();
         let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
             .take(n)
             .collect::<Vec<BigInt>>();
@@ -399,7 +401,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let y_inv = BigInt::mod_inv(&y, &order);
+        let y_inv = BigInt::mod_inv(&y, &order).unwrap();
         let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
             .take(n)
             .collect::<Vec<BigInt>>();
@@ -456,7 +458,7 @@ impl WeightedInnerProdArg {
             // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
             let x_lg_i_sq = x_sq_vec[(lg_n - 1) - lg_i].clone();
             s.push(s[i - k].clone() * x_lg_i_sq);
-            let s_inv_i = BigInt::mod_inv(&s[i], &order);
+            let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
             let si_yi = BigInt::mod_mul(&s[i], &powers_yinv[i - 1], &order);
 
             sg.push(si_yi);
@@ -534,14 +536,15 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
 
 #[cfg(test)]
 mod tests {
-    use curv::arithmetic::traits::{Converter, Modulo};
+    use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
+
     type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
+    type FE = curv::elliptic::curves::secp256_k1::FE;
 
     use itertools::iterate;
     use proofs::range_proof::generate_random_point;
@@ -550,13 +553,13 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -565,16 +568,16 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g = generate_random_point(&Converter::to_vec(&hash));
+        let g = generate_random_point(&Converter::to_bytes(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h = generate_random_point(&Converter::to_vec(&hash));
+        let h = generate_random_point(&Converter::to_bytes(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -641,13 +644,13 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
 
     fn test_helper_fast_verify(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -656,16 +659,16 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g = generate_random_point(&Converter::to_vec(&hash));
+        let g = generate_random_point(&Converter::to_bytes(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h = generate_random_point(&Converter::to_vec(&hash));
+        let h = generate_random_point(&Converter::to_bytes(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -732,13 +735,13 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
 
     fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -747,17 +750,17 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
         // generate g, h
         let label = BigInt::from(2);
         let hash = HSha512::create_hash(&[&label]);
-        let g = generate_random_point(&Converter::to_vec(&hash));
+        let g = generate_random_point(&Converter::to_bytes(&hash));
         let label = BigInt::from(3);
         let hash = HSha512::create_hash(&[&label]);
-        let h = generate_random_point(&Converter::to_vec(&hash));
+        let h = generate_random_point(&Converter::to_bytes(&hash));
 
         let y_scalar: BigInt =
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());

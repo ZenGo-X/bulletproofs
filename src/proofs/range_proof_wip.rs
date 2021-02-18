@@ -22,12 +22,14 @@ version 3 of the License, or (at your option) any later version.
 // Bulletproofs+ (https://eprint.iacr.org/2020/735.pdf) uses the weighted inner product argument
 // which reduces the overall prover communication by ~15%
 //
-use curv::arithmetic::traits::{Converter, Modulo};
+
+use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
 
@@ -60,13 +62,13 @@ impl StatementRP {
         let G: GE = ECPoint::generator();
         let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &FE::q());
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + init_seed;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -75,7 +77,7 @@ impl StatementRP {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + init_seed;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -135,7 +137,7 @@ impl RangeProofWIP {
         let secret_bits = (0..nm)
             .map(|i| {
                 let bignum_bit: BigInt = aL[i].clone() & BigInt::one();
-                let byte = BigInt::to_vec(&bignum_bit);
+                let byte = BigInt::to_bytes(&bignum_bit);
                 byte[0] == 1
             })
             .collect::<Vec<bool>>();
@@ -445,7 +447,7 @@ impl RangeProofWIP {
             .collect::<Vec<BigInt>>();
 
         // compute powers of y_inv
-        let y_inv = BigInt::mod_inv(&y_bn, &order);
+        let y_inv = BigInt::mod_inv(&y_bn, &order).unwrap();
         let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
             .take(nm)
             .collect::<Vec<BigInt>>();
@@ -496,7 +498,7 @@ impl RangeProofWIP {
             // so u_{lg(i)+1} = is indexed by (lg_nm-1) - lg_i
             let x_lg_i_sq = x_sq_vec[(lg_nm - 1) - lg_i].clone();
             s.push(s[i - k].clone() * x_lg_i_sq);
-            let s_inv_i = BigInt::mod_inv(&s[i], &order);
+            let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
             let si_yi = BigInt::mod_mul(&s[i], &powers_yinv[i - 1], &order);
 
             sg.push(si_yi);
@@ -599,11 +601,12 @@ impl RangeProofWIP {
 
 #[cfg(test)]
 mod tests {
-    use curv::arithmetic::traits::Samplable;
+    use curv::arithmetic::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
+
     type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
+    type FE = curv::elliptic::curves::secp256_k1::FE;
 
     use proofs::range_proof_wip::{RangeProofWIP, StatementRP};
 
@@ -667,7 +670,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         // num of proofs
         let m = 4;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let stmt = StatementRP::generate_bases(&kzen_label, m, n);
 
@@ -700,7 +703,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         // num of proofs
         let m = 4;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let stmt = StatementRP::generate_bases(&kzen_label, m, n);
 
@@ -732,28 +735,28 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
     #[test]
     pub fn test_batch_2_wip_range_proof_16() {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
         test_helper(&kzen_label, 16, 2);
     }
 
     #[test]
     pub fn test_batch_1_wip_range_proof_8() {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
         test_helper(&kzen_label, 8, 1);
     }
 
     #[test]
     pub fn test_batch_4_wip_range_proof_64() {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
         test_helper(&kzen_label, 64, 4);
     }
 
     #[test]
     pub fn test_batch_agg_4_wip_range_proof_64() {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
         test_helper_aggregate(&kzen_label, 64, 4);
     }
 }
