@@ -16,11 +16,13 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
-use curv::arithmetic::traits::{Converter, Modulo};
+
+use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
 
@@ -85,7 +87,7 @@ impl RangeProof {
         let secret_bits = (0..nm)
             .map(|i| {
                 let bignum_bit: BigInt = aL[i].clone() & BigInt::one();
-                let byte = BigInt::to_vec(&bignum_bit);
+                let byte = BigInt::to_bytes(&bignum_bit);
                 byte[0] == 1
             })
             .collect::<Vec<bool>>();
@@ -524,7 +526,7 @@ impl RangeProof {
         // regenerate challenges y, z, x, x_u from transcript
         let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
         let y_bn = y.to_big_int();
-        let y_inv_bn = BigInt::mod_inv(&y_bn, &order);
+        let y_inv_bn = BigInt::mod_inv(&y_bn, &order).unwrap();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
         let z = HSha256::create_hash_from_ge(&[&yG]);
@@ -642,7 +644,7 @@ impl RangeProof {
 
         let b_times_sinv: Vec<BigInt> = (0..nm)
             .map(|i| {
-                let s_inv_i = BigInt::mod_inv(&s[i], &order);
+                let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
                 BigInt::mod_mul(&s_inv_i, &self.inner_product_proof.b_tag, &order)
             })
             .collect();
@@ -745,22 +747,22 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
         return result.unwrap();
     } else {
         let two = BigInt::from(2);
-        let bn = BigInt::from(bytes);
+        let bn = BigInt::from_bytes(bytes);
         let bn_times_two = BigInt::mod_mul(&bn, &two, &FE::q());
-        let bytes = BigInt::to_vec(&bn_times_two);
+        let bytes = BigInt::to_bytes(&bn_times_two);
         return generate_random_point(&bytes);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use curv::arithmetic::traits::{Converter, Samplable};
+    use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
-    type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
+
+    use super::{FE, GE};
 
     use proofs::range_proof::generate_random_point;
     use proofs::range_proof::RangeProof;
@@ -770,13 +772,13 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + seed;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -785,7 +787,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + seed;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -813,13 +815,13 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + seed;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -828,7 +830,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + seed;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -859,18 +861,18 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         let m = 4;
         let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -879,7 +881,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -910,18 +912,18 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         let m = 4;
         let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -930,7 +932,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -963,18 +965,18 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         let m = 2;
         let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -983,7 +985,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -1015,19 +1017,19 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
         let nm = n * m;
         // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         // G,H - points for pederson commitment: com  = vG + rH
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&Converter::to_bytes(&hash));
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -1036,7 +1038,7 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
@@ -1062,14 +1064,14 @@ type FE = curv::elliptic::curves::secp256_k1::FE;
     #[test]
     pub fn test_batch_4_range_proof_64() {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
         test_helper(&kzen_label, 64, 4);
     }
 
     #[test]
     pub fn test_agg_batch_4_range_proof_64() {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
         test_helper_aggregated(&kzen_label, 64, 4);
     }
 }

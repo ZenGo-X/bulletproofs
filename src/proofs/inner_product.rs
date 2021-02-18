@@ -16,14 +16,14 @@ version 3 of the License, or (at your option) any later version.
 */
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
-use curv::arithmetic::traits::Modulo;
+use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
-
 
 use Errors::{self, InnerProductError};
 
@@ -302,7 +302,7 @@ impl InnerProductArg {
 
         let b_div_s: Vec<BigInt> = (0..n)
             .map(|i| {
-                let s_inv_i = BigInt::mod_inv(&s[i], &order);
+                let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
                 BigInt::mod_mul(&s_inv_i, &self.b_tag, &order)
             })
             .collect();
@@ -353,25 +353,25 @@ fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
 
 #[cfg(test)]
 mod tests {
-    use curv::arithmetic::traits::{Converter, Modulo};
+    use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use curv::cryptographic_primitives::hashing::traits::*;
+    use curv::elliptic::curves::secp256_k1::FE;
+    use curv::elliptic::curves::secp256_k1::GE;
     use curv::elliptic::curves::traits::*;
     use curv::BigInt;
-    use curv::elliptic::curves::secp256_k1::GE;
-    use curv::elliptic::curves::secp256_k1::FE;
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -380,13 +380,13 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx = generate_random_point(&Converter::to_vec(&hash));
+        let Gx = generate_random_point(&Converter::to_bytes(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -443,13 +443,13 @@ mod tests {
 
     fn test_helper_fast_verify(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -458,13 +458,13 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx = generate_random_point(&Converter::to_vec(&hash));
+        let Gx = generate_random_point(&Converter::to_bytes(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
@@ -521,13 +521,13 @@ mod tests {
 
     fn test_helper_non_power_2(m: usize, n: usize, a: &[BigInt], b: &[BigInt]) {
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
 
@@ -536,13 +536,13 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&Converter::to_bytes(&hash_j))
             })
             .collect::<Vec<GE>>();
 
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let Gx = generate_random_point(&Converter::to_vec(&hash));
+        let Gx = generate_random_point(&Converter::to_bytes(&hash));
 
         let c = super::inner_product(&a, &b);
 
