@@ -13,11 +13,7 @@ crate-type = ["lib"]
 itertools = "0.7.8"
 serde = "1.0"
 serde_derive = "1.0"
-
-[dependencies.curv]
-git = "https://github.com/KZen-networks/curv"
-tag = "v0.6.2"
-default-features = false
+curv = { package = "curv-kzen", version = "0.7", default-features = false }
 
 [dev-dependencies]
 criterion = "0.2"
