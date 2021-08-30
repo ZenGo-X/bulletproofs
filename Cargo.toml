@@ -14,7 +14,7 @@ itertools = "0.7.8"
 serde = "1.0"
 serde_derive = "1.0"
 #curv = { package = "curv-kzen", version = "0.7", default-features = false }
-curv = {git = "https://github.com/Polkadex-Substrate/curv.git", default-features = false, version = "0.7"}
+curv = { git = "https://github.com/Polkadex-Substrate/curv", default-features = false, tag = "v0.7.1" }
 
 [dev-dependencies]
 criterion = "0.2"
