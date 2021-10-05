@@ -17,8 +17,6 @@ version 3 of the License, or (at your option) any later version.
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 use curv::arithmetic::traits::*;
-use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
 

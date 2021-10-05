@@ -24,9 +24,6 @@ version 3 of the License, or (at your option) any later version.
 //
 
 use curv::arithmetic::traits::*;
-use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
-use curv::cryptographic_primitives::hashing::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
 
