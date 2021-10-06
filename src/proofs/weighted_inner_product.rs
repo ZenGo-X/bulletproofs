@@ -23,9 +23,9 @@ version 3 of the License, or (at your option) any later version.
 //
 
 use curv::arithmetic::traits::*;
+use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
 use sha2::Sha256;
 
 type GE = curv::elliptic::curves::secp256_k1::GE;
@@ -299,7 +299,9 @@ impl WeightedInnerProdArg {
             let (G_L, G_R) = G.split_at(n);
             let (H_L, H_R) = H.split_at(n);
 
-            let x = Sha256::new().chain_points([&self.L[0], &self.R[0], &g, &h]).result_scalar();
+            let x = Sha256::new()
+                .chain_points([&self.L[0], &self.R[0], &g, &h])
+                .result_scalar();
             let x_bn = x.to_big_int();
             let order = FE::q();
             let x_inv_fe = x.invert();
@@ -347,7 +349,9 @@ impl WeightedInnerProdArg {
 
         // compute challenge e
 
-        let e = Sha256::new().chain_points([&self.a_tag, &self.b_tag, &g, &h]).result_scalar();
+        let e = Sha256::new()
+            .chain_points([&self.a_tag, &self.b_tag, &g, &h])
+            .result_scalar();
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
         let e_sq_fe: FE = ECScalar::from(&e_sq_bn);
@@ -414,7 +418,9 @@ impl WeightedInnerProdArg {
         );
 
         // compute challenge e
-        let e = Sha256::new().chain_points([&self.a_tag, &self.b_tag, &g, &h]).result_scalar();
+        let e = Sha256::new()
+            .chain_points([&self.a_tag, &self.b_tag, &g, &h])
+            .result_scalar();
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
 
@@ -424,7 +430,9 @@ impl WeightedInnerProdArg {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = Sha256::new().chain_points([&Li, &Ri, &g, &h]).result_scalar();
+            let x = Sha256::new()
+                .chain_points([&Li, &Ri, &g, &h])
+                .result_scalar();
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();

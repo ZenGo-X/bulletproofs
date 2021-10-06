@@ -17,10 +17,10 @@ version 3 of the License, or (at your option) any later version.
 
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 use curv::arithmetic::traits::*;
+use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
-use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use sha2::Sha256;
+use sha2::{Sha256, Sha512};
 
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
@@ -186,7 +186,9 @@ impl InnerProductArg {
             let (G_L, G_R) = G.split_at(n);
             let (H_L, H_R) = H.split_at(n);
 
-            let x = Sha256::new().chain_points([&self.L[0], &self.R[0], &ux]).result_scalar();
+            let x = Sha256::new()
+                .chain_points([&self.L[0], &self.R[0], &ux])
+                .result_scalar();
             let x_bn = x.to_big_int();
             let order = FE::q();
             let x_inv_fe = x.invert();
@@ -269,7 +271,6 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-
             let x = Sha256::new().chain_points([Li, Ri, ux]).result_scalar();
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
@@ -372,6 +373,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                let hash_i = Sha512::new().chain_bigint(&kzen_label_i).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_i))
             })
             .collect::<Vec<GE>>();
