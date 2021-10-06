@@ -26,6 +26,8 @@ version 3 of the License, or (at your option) any later version.
 use curv::arithmetic::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+use sha2::Sha256;
 
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
@@ -157,11 +159,11 @@ impl RangeProofWIP {
             }
         });
 
-        let y = HSha256::create_hash_from_ge(&[&A]);
+        let y = Sha256::new().chain_points([&A]).result_scalar();
         let y_bn = y.to_big_int();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&A, &yG]);
+        let z = Sha256::new().chain_points([&A, &yG]).result_scalar();
         let z_bn = z.to_big_int();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
@@ -280,11 +282,11 @@ impl RangeProofWIP {
         let one = BigInt::from(1);
         let order = FE::q();
 
-        let y = HSha256::create_hash_from_ge(&[&self.A]);
+        let y = Sha256::new().chain_points([&self.A]).result_scalar();
         let y_bn = y.to_big_int();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&self.A, &yG]);
+        let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_big_int();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
@@ -406,11 +408,11 @@ impl RangeProofWIP {
         );
 
         // compute challenges
-        let y = HSha256::create_hash_from_ge(&[&self.A]);
+        let y = Sha256::new().chain_points([&self.A]).result_scalar();
         let y_bn = y.to_big_int();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&self.A, &yG]);
+        let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_big_int();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
@@ -450,7 +452,8 @@ impl RangeProofWIP {
             .collect::<Vec<BigInt>>();
 
         // compute challenge e
-        let e = HSha256::create_hash_from_ge(&[&wip.a_tag, &wip.b_tag, &g, &h]);
+
+        let e = Sha256::new().chain_points([&wip.a_tag, &wip.b_tag, &g, &h]).result_scalar();
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
 
@@ -460,7 +463,8 @@ impl RangeProofWIP {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in wip.L.iter().zip(wip.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[&Li, &Ri, &g, &h]);
+
+            let x = Sha256::new().chain_points([&Li, &Ri, &g, &h]).result_scalar();
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();

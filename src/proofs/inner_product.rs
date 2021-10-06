@@ -19,6 +19,8 @@ version 3 of the License, or (at your option) any later version.
 use curv::arithmetic::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+use sha2::Sha256;
 
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
@@ -115,7 +117,7 @@ impl InnerProductArg {
                 }
             });
 
-            let x = HSha256::create_hash_from_ge(&[&L, &R, &ux]);
+            let x = Sha256::new().chain_points([&L, &R, &ux]).result_scalar();
             let x_bn = x.to_big_int();
             let order = FE::q();
             let x_inv_fe = x.invert();
@@ -184,7 +186,7 @@ impl InnerProductArg {
             let (G_L, G_R) = G.split_at(n);
             let (H_L, H_R) = H.split_at(n);
 
-            let x = HSha256::create_hash_from_ge(&[&self.L[0], &self.R[0], &ux]);
+            let x = Sha256::new().chain_points([&self.L[0], &self.R[0], &ux]).result_scalar();
             let x_bn = x.to_big_int();
             let order = FE::q();
             let x_inv_fe = x.invert();
@@ -267,7 +269,8 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[Li, Ri, ux]);
+
+            let x = Sha256::new().chain_points([Li, Ri, ux]).result_scalar();
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();

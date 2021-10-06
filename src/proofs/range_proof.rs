@@ -20,6 +20,8 @@ version 3 of the License, or (at your option) any later version.
 use curv::arithmetic::traits::*;
 use curv::elliptic::curves::traits::*;
 use curv::BigInt;
+use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+use sha2::Sha256;
 
 type GE = curv::elliptic::curves::secp256_k1::GE;
 type FE = curv::elliptic::curves::secp256_k1::FE;
@@ -117,10 +119,10 @@ impl RangeProof {
             acc + SRhi_plus_SLgi
         });
 
-        let y = HSha256::create_hash_from_ge(&[&A, &S]);
+        let y = Sha256::new().chain_points([&A, &S]).result_scalar();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&yG]);
+        let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_big_int();
 
         let one_fe: FE = ECScalar::from(&one);
@@ -164,7 +166,7 @@ impl RangeProof {
         let T1 = G * &t1_fe + H * &tau1;
         let T2 = G * &t2_fe + H * &tau2;
 
-        let fs_challenge = HSha256::create_hash_from_ge(&[&T1, &T2, G, H]);
+        let fs_challenge = Sha256::new().chain_points([&T1, &T2, G, H]).result_scalar();
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
         let taux_1 = fs_challenge.mul(&tau1.get_element());
         let taux_2 = fs_challenge_square.mul(&tau2.get_element());
@@ -206,7 +208,8 @@ impl RangeProof {
             BigInt::mod_add(&acc, &Lp_iRp_i, &order)
         });
         let tx_fe: FE = ECScalar::from(&tx);
-        let challenge_x = HSha256::create_hash(&[&tau_x.to_big_int(), &miu.to_big_int(), &tx]);
+
+        let challenge_x = Sha256::new().chain_points([&tau_x.to_big_int(), &miu.to_big_int(), &tx]).result_scalar();
         let challenge_x: FE = ECScalar::from(&challenge_x);
         let Gx = G * &challenge_x;
         // P' = u^{xc}
@@ -264,10 +267,10 @@ impl RangeProof {
         let num_of_proofs = ped_com.len();
         let nm = num_of_proofs * bit_length;
 
-        let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
+        let y = Sha256::new().chain_points([&self.A, &self.S]).result_scalar();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&yG]);
+        let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_big_int();
         let order = FE::q();
         let z_minus = BigInt::mod_sub(&order, &z.to_big_int(), &order);
@@ -308,7 +311,7 @@ impl RangeProof {
 
         let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
-        let fs_challenge = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
+        let fs_challenge = Sha256::new().chain_points([&self.T1, &self.T2, G, H]).result_scalar();
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
 
         // eq 65:
@@ -331,6 +334,7 @@ impl RangeProof {
         let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x);
         let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
 
+        // TODO: tmpfs
         let challenge_x = HSha256::create_hash(&[
             &self.tau_x.to_big_int(),
             &self.miu.to_big_int(),
@@ -384,10 +388,10 @@ impl RangeProof {
         let num_of_proofs = ped_com.len();
         let nm = num_of_proofs * bit_length;
 
-        let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
+        let y = Sha256::new().chain_points([&self.A, &self.S]).result_scalar();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&yG]);
+        let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_big_int();
         let order = FE::q();
         let z_minus = BigInt::mod_sub(&order, &z.to_big_int(), &order);
@@ -428,7 +432,7 @@ impl RangeProof {
 
         let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
-        let fs_challenge = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
+        let fs_challenge = Sha256::new().chain_points([&self.T1, &self.T2, G, H]).result_scalar();
         let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
 
         // eq 65:
@@ -451,6 +455,7 @@ impl RangeProof {
         let ped_com_sum = vec_ped_zm.iter().fold(vec_ped_zm_1, |acc, x| acc + x);
         let right_side = ped_com_sum + Gdelta + Tx + Tx_sq;
 
+        // TODO: tmpfs
         let challenge_x = HSha256::create_hash(&[
             &self.tau_x.to_big_int(),
             &self.miu.to_big_int(),
@@ -522,18 +527,19 @@ impl RangeProof {
         );
 
         // regenerate challenges y, z, x, x_u from transcript
-        let y = HSha256::create_hash_from_ge(&[&self.A, &self.S]);
+        let y = Sha256::new().chain_points([&self.A, &self.S]).result_scalar();
         let y_bn = y.to_big_int();
         let y_inv_bn = BigInt::mod_inv(&y_bn, &order).unwrap();
         let base_point: GE = ECPoint::generator();
         let yG: GE = base_point * &y;
-        let z = HSha256::create_hash_from_ge(&[&yG]);
+        let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_big_int();
         let z_squared = BigInt::mod_pow(&z_bn, &BigInt::from(2), &order);
 
-        let challenge_x = HSha256::create_hash_from_ge(&[&self.T1, &self.T2, G, H]);
+        let challenge_x = Sha256::new().chain_points([&self.T1, &self.T2, G, H]).result_scalar();
         let challenge_x_sq = challenge_x.mul(&challenge_x.get_element());
 
+        // TODO: tmpfs
         let x_u = HSha256::create_hash(&[
             &self.tau_x.to_big_int(),
             &self.miu.to_big_int(),
@@ -545,8 +551,7 @@ impl RangeProof {
         let ux = G * &x_u_fe;
 
         // generate a random scalar to combine 2 verification equations
-        let challenge_ver =
-            HSha256::create_hash_from_ge(&[&self.A, &self.S, &self.T1, &self.T2, G, H]);
+        let challenge_ver = Sha256::new().chain_points([&self.A, &self.S, &self.T1, &self.T2, G, H]).result_scalar();
         let challenge_ver_bn = challenge_ver.to_big_int();
 
         // z2_vec = (z^2, z^3, z^4, ..., z^{m+1})
@@ -609,7 +614,7 @@ impl RangeProof {
             .iter()
             .zip(self.inner_product_proof.R.iter())
         {
-            let x = HSha256::create_hash_from_ge::<GE>(&[&Li, &Ri, &ux]);
+            let x = Sha256::new().chain_points([&Li, &Ri, &ux]).result_scalar();
             let x_bn = x.to_big_int();
             let x_inv_fe = x.invert();
             let x_inv_bn = x_inv_fe.to_big_int();
