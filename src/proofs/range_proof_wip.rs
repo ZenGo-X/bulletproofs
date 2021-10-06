@@ -117,7 +117,7 @@ impl RangeProofWIP {
         //concat all secrets:
         secret.reverse();
         let secret_agg = secret.iter().fold(BigInt::zero(), |acc, x| {
-            acc.shl(bit_length) + x.to_big_int()
+            acc.shl(bit_length) + x.to_bigint()
         });
 
         let aL = (0..nm)
@@ -157,11 +157,11 @@ impl RangeProofWIP {
         });
 
         let y = Sha256::new().chain_points([&A]).result_scalar();
-        let y_bn = y.to_big_int();
+        let y_bn = y.to_bigint();
         let base_point: Point<Secp256k1> = ECPoint::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&A, &yG]).result_scalar();
-        let z_bn = z.to_big_int();
+        let z_bn = z.to_bigint();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
         // y_vec = (y, y^2, ..., y^{nm})
@@ -195,13 +195,13 @@ impl RangeProofWIP {
         // compute exponent of h
         let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), &order);
         let ip_blinding = (0..num_of_proofs)
-            .map(|i| BigInt::mod_mul(&blinding[i].to_big_int(), &vec_z2m[i].clone(), &order))
+            .map(|i| BigInt::mod_mul(&blinding[i].to_bigint(), &vec_z2m[i].clone(), &order))
             .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
         let scalar_H = BigInt::mod_mul(&ip_blinding, &y_pow, &order);
 
         // compute exponent of g
         let ip_secrets = (0..num_of_proofs)
-            .map(|i| BigInt::mod_mul(&secret[i].to_big_int(), &vec_z2m[i].clone(), &order))
+            .map(|i| BigInt::mod_mul(&secret[i].to_bigint(), &vec_z2m[i].clone(), &order))
             .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
         let scalar1_G = BigInt::mod_mul(&ip_secrets, &y_pow, &order);
 
@@ -251,7 +251,7 @@ impl RangeProofWIP {
             .map(|i| BigInt::mod_add(&aR[i], &scalars_h_vec[i], &order))
             .collect::<Vec<BigInt>>();
 
-        let alpha_hat = BigInt::mod_add(&alpha.to_big_int(), &scalar_H, &order);
+        let alpha_hat = BigInt::mod_add(&alpha.to_bigint(), &scalar_H, &order);
 
         let L_vec = Vec::with_capacity(nm);
         let R_vec = Vec::with_capacity(nm);
@@ -280,11 +280,11 @@ impl RangeProofWIP {
         let order = Scalar::<Secp256k1>::q();
 
         let y = Sha256::new().chain_points([&self.A]).result_scalar();
-        let y_bn = y.to_big_int();
+        let y_bn = y.to_bigint();
         let base_point: Point<Secp256k1> = ECPoint::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
-        let z_bn = z.to_big_int();
+        let z_bn = z.to_bigint();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
         // y_vec = (y, y^2, ..., y^{nm})
@@ -406,11 +406,11 @@ impl RangeProofWIP {
 
         // compute challenges
         let y = Sha256::new().chain_points([&self.A]).result_scalar();
-        let y_bn = y.to_big_int();
+        let y_bn = y.to_bigint();
         let base_point: Point<Secp256k1> = ECPoint::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
-        let z_bn = z.to_big_int();
+        let z_bn = z.to_bigint();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
         // y_vec = (y, y^2, ..., y^{nm})
@@ -453,7 +453,7 @@ impl RangeProofWIP {
         let e = Sha256::new()
             .chain_points([&wip.a_tag, &wip.b_tag, &g, &h])
             .result_scalar();
-        let e_bn = e.to_big_int();
+        let e_bn = e.to_bigint();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
 
         let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
@@ -465,12 +465,12 @@ impl RangeProofWIP {
             let x = Sha256::new()
                 .chain_points([&Li, &Ri, &g, &h])
                 .result_scalar();
-            let x_bn = x.to_big_int();
+            let x_bn = x.to_bigint();
             let x_inv_fe = x.invert();
-            let x_inv_bn = x_inv_fe.to_big_int();
+            let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
+                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
             let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, &order);
             let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, &order);
 

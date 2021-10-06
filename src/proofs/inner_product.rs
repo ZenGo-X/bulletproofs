@@ -115,14 +115,14 @@ impl InnerProductArg {
             });
 
             let x = Sha256::new().chain_points([&L, &R, &ux]).result_scalar();
-            let x_bn = x.to_big_int();
+            let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::q();
             let x_inv_fe = x.invert();
 
             let a_new = (0..n)
                 .map(|i| {
                     let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
-                    let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_big_int(), &order);
+                    let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_bigint(), &order);
                     BigInt::mod_add(&aLx, &aR_minusx, &order)
                 })
                 .collect::<Vec<BigInt>>();
@@ -131,7 +131,7 @@ impl InnerProductArg {
             let b_new = (0..n)
                 .map(|i| {
                     let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
-                    let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_big_int(), &order);
+                    let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_bigint(), &order);
                     BigInt::mod_add(&bRx, &bL_minusx, &order)
                 })
                 .collect::<Vec<BigInt>>();
@@ -186,12 +186,12 @@ impl InnerProductArg {
             let x = Sha256::new()
                 .chain_points([&self.L[0], &self.R[0], &ux])
                 .result_scalar();
-            let x_bn = x.to_big_int();
+            let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::q();
             let x_inv_fe = x.invert();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
+                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
             let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
             let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
@@ -269,12 +269,12 @@ impl InnerProductArg {
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
             let x = Sha256::new().chain_points([Li, Ri, ux]).result_scalar();
-            let x_bn = x.to_big_int();
+            let x_bn = x.to_bigint();
             let x_inv_fe = x.invert();
-            let x_inv_bn = x_inv_fe.to_big_int();
+            let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
+                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
 
             x_sq_vec.push(x_sq_bn.clone());
             x_inv_sq_vec.push(x_inv_sq_bn.clone());
@@ -389,14 +389,14 @@ mod tests {
         let a: Vec<_> = (0..n)
             .map(|_| {
                 let rand = Scalar::<Secp256k1>::random();
-                rand.to_big_int()
+                rand.to_bigint()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
                 let rand = Scalar::<Secp256k1>::random();
-                rand.to_big_int()
+                rand.to_bigint()
             })
             .collect();
         let c = super::inner_product(&a, &b);
@@ -404,7 +404,7 @@ mod tests {
         let y = Scalar::<Secp256k1>::random();
         let order = Scalar::<Secp256k1>::q();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
@@ -467,14 +467,14 @@ mod tests {
         let a: Vec<_> = (0..n)
             .map(|_| {
                 let rand = Scalar::<Secp256k1>::random();
-                rand.to_big_int()
+                rand.to_bigint()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
                 let rand = Scalar::<Secp256k1>::random();
-                rand.to_big_int()
+                rand.to_bigint()
             })
             .collect();
         let c = super::inner_product(&a, &b);
@@ -482,7 +482,7 @@ mod tests {
         let y = Scalar::<Secp256k1>::random();
         let order = Scalar::<Secp256k1>::q();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
@@ -547,7 +547,7 @@ mod tests {
         let y = Scalar::<Secp256k1>::random();
         let order = Scalar::<Secp256k1>::q();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
@@ -649,14 +649,14 @@ mod tests {
         let mut a: Vec<_> = (0..n)
             .map(|_| {
                 let rand = Scalar::<Secp256k1>::random();
-                rand.to_big_int()
+                rand.to_bigint()
             })
             .collect();
 
         let mut b: Vec<_> = (0..n)
             .map(|_| {
                 let rand = Scalar::<Secp256k1>::random();
-                rand.to_big_int()
+                rand.to_bigint()
             })
             .collect();
 
