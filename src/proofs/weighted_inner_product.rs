@@ -24,7 +24,7 @@ version 3 of the License, or (at your option) any later version.
 
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::traits::*;
+use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
 use curv::BigInt;
 use sha2::Sha256;
 
@@ -104,14 +104,14 @@ impl WeightedInnerProdArg {
             // since 0 is an invalid secret key!
             //
             // L = <yninv_aL * G_R> + <b_R * H_L> + (c_L * g) + (d_L * h)
-            let c_L_fe: FE = ECScalar::from(&c_L);
+            let c_L_fe = Scalar::<Secp256k1>::from(&c_L);
             let g_cL: GE = g * &c_L_fe;
             let d_L_fe: FE = ECScalar::new_random();
             let h_dL = h * &d_L_fe;
             let g_cL_h_dL = g_cL.add_point(&h_dL.get_element());
             let yninv_aL_GR = G_R.iter().zip(yninv_aL.clone()).fold(g_cL_h_dL, |acc, x| {
                 if x.1 != BigInt::zero() {
-                    let aLi: FE = ECScalar::from(&x.1);
+                    let aLi = Scalar::<Secp256k1>::from(&x.1);
                     let aLi_GRi: GE = x.0 * &aLi;
                     acc.add_point(&aLi_GRi.get_element())
                 } else {
@@ -120,7 +120,7 @@ impl WeightedInnerProdArg {
             });
             let L = H_L.iter().zip(b_R.clone()).fold(yninv_aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi: FE = ECScalar::from(&x.1);
+                    let bRi = Scalar::<Secp256k1>::from(&x.1);
                     let bRi_HLi: GE = x.0 * &bRi;
                     acc.add_point(&bRi_HLi.get_element())
                 } else {
@@ -132,14 +132,14 @@ impl WeightedInnerProdArg {
             // since 0 is an invalid secret key!
             //
             // R = <yn_aR * G_R> + <b_R * H_L> + (c_R * g) + (d_R * h)
-            let c_R_fe: FE = ECScalar::from(&c_R);
+            let c_R_fe = Scalar::<Secp256k1>::from(&c_R);
             let g_cR: GE = g * &c_R_fe;
             let d_R_fe: FE = ECScalar::new_random();
             let h_dR = h * &d_R_fe;
             let g_cR_h_dR = g_cR.add_point(&h_dR.get_element());
             let aR_GL = G_L.iter().zip(yn_aR.clone()).fold(g_cR_h_dR, |acc, x| {
                 if x.1 != BigInt::zero() {
-                    let aRi: FE = ECScalar::from(&x.1);
+                    let aRi = Scalar::<Secp256k1>::from(&x.1);
                     let aRi_GLi: GE = x.0 * &aRi;
                     acc.add_point(&aRi_GLi.get_element())
                 } else {
@@ -148,7 +148,7 @@ impl WeightedInnerProdArg {
             });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi: FE = ECScalar::from(&x.1);
+                    let bLi = Scalar::<Secp256k1>::from(&x.1);
                     let bLi_HRi: GE = x.0 * &bLi;
                     acc.add_point(&bLi_HRi.get_element())
                 } else {
@@ -188,7 +188,7 @@ impl WeightedInnerProdArg {
             let alpha_hat = BigInt::mod_add(&alpha, &x2_dL_xinv2_dR, &order);
 
             let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
-            let x_yinv_fe = ECScalar::from(&x_yinv);
+            let x_yinv_fe = Scalar::<Secp256k1>::from(&x_yinv);
             let G_hat = (0..n)
                 .map(|i| {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
@@ -230,14 +230,14 @@ impl WeightedInnerProdArg {
             let b_r = BigInt::mod_mul(&b[0], &r_bn, &order);
             let b_ry = BigInt::mod_mul(&b_r, &y, &order);
             let a_sy_b_ry = BigInt::mod_add(&a_sy, &b_ry, &order);
-            let g_a_sy_b_ry = g * &ECScalar::from(&a_sy_b_ry);
+            let g_a_sy_b_ry = g * &Scalar::<Secp256k1>::from(&a_sy_b_ry);
             let h_delta = h * &delta;
             let A = Gr + Hs + g_a_sy_b_ry + h_delta;
 
             // compute B
             let r_s = BigInt::mod_mul(&r_bn, &s_bn, &order);
             let r_sy = BigInt::mod_mul(&y, &r_s, &order);
-            let g_r_sy = g * &ECScalar::from(&r_sy);
+            let g_r_sy = g * &Scalar::<Secp256k1>::from(&r_sy);
             let h_eta = h * &eta;
             let B = g_r_sy + h_eta;
 
@@ -308,11 +308,11 @@ impl WeightedInnerProdArg {
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
-            let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
+            let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
+            let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
             let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
-            let x_yinv_fe = ECScalar::from(&x_yinv);
+            let x_yinv_fe = Scalar::<Secp256k1>::from(&x_yinv);
             let G_hat = (0..n)
                 .map(|i| {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
@@ -354,7 +354,7 @@ impl WeightedInnerProdArg {
             .result_scalar();
         let e_bn = e.to_big_int();
         let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
-        let e_sq_fe: FE = ECScalar::from(&e_sq_bn);
+        let e_sq_fe = Scalar::<Secp256k1>::from(&e_sq_bn);
 
         // left hand side of verification
         // LHS = e^2*P + e*A + B
@@ -364,13 +364,13 @@ impl WeightedInnerProdArg {
 
         // RHS = (er')*G + (es')*H + (r's'y)*g + (delta')*h
         let er_prime = BigInt::mod_mul(&e_bn, &self.r_prime, &order);
-        let Ger_prime = &G[0] * &ECScalar::from(&er_prime);
+        let Ger_prime = &G[0] * &Scalar::<Secp256k1>::from(&er_prime);
         let es_prime = BigInt::mod_mul(&e_bn, &self.s_prime, &order);
-        let Hes_prime = &H[0] * &ECScalar::from(&es_prime);
+        let Hes_prime = &H[0] * &Scalar::<Secp256k1>::from(&es_prime);
         let rs_prime = BigInt::mod_mul(&self.s_prime, &self.r_prime, &order);
         let yrs_prime = BigInt::mod_mul(&rs_prime, &y, &order);
-        let g_yrs_prime = g * &ECScalar::from(&yrs_prime);
-        let h_delta_prime = h * &ECScalar::from(&self.delta_prime);
+        let g_yrs_prime = g * &Scalar::<Secp256k1>::from(&yrs_prime);
+        let h_delta_prime = h * &Scalar::<Secp256k1>::from(&self.delta_prime);
         let right = Ger_prime + Hes_prime + g_yrs_prime + h_delta_prime;
 
         if left == right {
@@ -504,14 +504,14 @@ impl WeightedInnerProdArg {
         points.extend_from_slice(&self.R);
         points.push(*g);
 
-        let h_delta_prime = h * &ECScalar::from(&self.delta_prime);
+        let h_delta_prime = h * &Scalar::<Secp256k1>::from(&self.delta_prime);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
+            .map(|i| points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
             .fold(h_delta_prime, |acc, x| acc + x as GE);
 
-        let Ae = self.a_tag * &ECScalar::from(&e_bn);
-        let Pe_sq = P * &ECScalar::from(&e_sq_bn);
+        let Ae = self.a_tag * &Scalar::<Secp256k1>::from(&e_bn);
+        let Pe_sq = P * &Scalar::<Secp256k1>::from(&e_sq_bn);
         let rhs = Pe_sq + Ae + self.b_tag;
 
         if lhs == rhs {
@@ -617,7 +617,7 @@ mod tests {
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert()
             })
             .collect::<Vec<FE>>();
@@ -625,19 +625,19 @@ mod tests {
         let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe = Scalar::<Secp256k1>::from(&c);
         let g_c: GE = &g * &c_fe;
         let h_alpha: GE = &h * &alpha_fe;
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
             .fold(gc_halpha, |acc, x: GE| acc + x as GE);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
             .fold(a_G, |acc, x: GE| acc + x as GE);
@@ -708,7 +708,7 @@ mod tests {
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert()
             })
             .collect::<Vec<FE>>();
@@ -716,19 +716,19 @@ mod tests {
         let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe = Scalar::<Secp256k1>::from(&c);
         let g_c: GE = &g * &c_fe;
         let h_alpha: GE = &h * &alpha_fe;
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
             .fold(gc_halpha, |acc, x: GE| acc + x as GE);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
             .fold(a_G, |acc, x: GE| acc + x as GE);
@@ -786,7 +786,7 @@ mod tests {
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert()
             })
             .collect::<Vec<FE>>();
@@ -794,19 +794,19 @@ mod tests {
         let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe = Scalar::<Secp256k1>::from(&c);
         let g_c: GE = &g * &c_fe;
         let h_alpha: GE = &h * &alpha_fe;
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..m)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
             .fold(gc_halpha, |acc, x: GE| acc + x as GE);
         let P = (0..m)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
             .fold(a_G, |acc, x: GE| acc + x as GE);

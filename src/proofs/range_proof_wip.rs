@@ -25,7 +25,7 @@ version 3 of the License, or (at your option) any later version.
 
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::traits::*;
+use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
 use curv::BigInt;
 use sha2::{Sha256, Sha512};
 
@@ -242,7 +242,7 @@ impl RangeProofWIP {
         A_hat_bases.extend_from_slice(&[G, H]);
 
         let A_hat = (0..(2 * nm + 2))
-            .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
+            .map(|i| A_hat_bases[i] * &Scalar::<Secp256k1>::from(&A_hat_scalars[i]))
             .fold(A.clone(), |acc, x| acc + x as GE);
 
         // compute aL_hat, aR_hat, alpha_hat
@@ -347,7 +347,7 @@ impl RangeProofWIP {
         let sum_com = (0..num_of_proofs)
             .map(|i| {
                 let y_pow_z2i = BigInt::mod_mul(&y_pow, &vec_z2m[i].clone(), &order);
-                ped_com[i] * &ECScalar::from(&y_pow_z2i)
+                ped_com[i] * &Scalar::<Secp256k1>::from(&y_pow_z2i)
             })
             .fold(self.A, |acc, x| acc + x as GE);
 
@@ -363,7 +363,7 @@ impl RangeProofWIP {
         A_hat_bases.extend_from_slice(&[G]);
 
         let A_hat = (0..(2 * nm + 1))
-            .map(|i| A_hat_bases[i] * &ECScalar::from(&A_hat_scalars[i]))
+            .map(|i| A_hat_bases[i] * &Scalar::<Secp256k1>::from(&A_hat_scalars[i]))
             .fold(sum_com.clone(), |acc, x| acc + x as GE);
 
         let verify = self
@@ -589,10 +589,10 @@ impl RangeProofWIP {
         points.extend_from_slice(&ped_com);
         points.push(wip.a_tag);
 
-        let h_delta_prime = h * &ECScalar::from(&wip.delta_prime);
+        let h_delta_prime = h * &Scalar::<Secp256k1>::from(&wip.delta_prime);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
+            .map(|i| points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
             .fold(h_delta_prime, |acc, x| acc + x as GE);
 
         if lhs == wip.b_tag {
@@ -606,7 +606,7 @@ impl RangeProofWIP {
 #[cfg(test)]
 mod tests {
     use curv::arithmetic::traits::*;
-    use curv::elliptic::curves::traits::*;
+    use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
     use curv::BigInt;
 
     type GE = curv::elliptic::curves::secp256_k1::GE;
@@ -623,7 +623,7 @@ mod tests {
         let H = stmt.H;
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
         let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
@@ -650,7 +650,7 @@ mod tests {
         let H = stmt.H;
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
         let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
@@ -683,7 +683,7 @@ mod tests {
         let H = stmt.H;
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
-            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
         let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
@@ -716,11 +716,11 @@ mod tests {
         let H = stmt.H;
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
-            .map(|_| ECScalar::from(&BigInt::sample_below(&range)))
+            .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
         let bad_v = BigInt::from(2).pow(33);
-        v_vec.push(ECScalar::from(&bad_v));
+        v_vec.push(Scalar::<Secp256k1>::from(&bad_v));
 
         let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
 

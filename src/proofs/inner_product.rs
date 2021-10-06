@@ -18,7 +18,7 @@ version 3 of the License, or (at your option) any later version.
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::traits::*;
+use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
 use curv::BigInt;
 use sha2::{Sha256, Sha512};
 
@@ -71,11 +71,11 @@ impl InnerProductArg {
             // since 0 is an invalid secret key!
             //
             // L = <a_L * G_R> + <b_R * H_L> + c_L * ux
-            let c_L_fe: FE = ECScalar::from(&c_L);
+            let c_L_fe = Scalar::<Secp256k1>::from(&c_L);
             let ux_CL: GE = ux * &c_L_fe;
             let aL_GR = G_R.iter().zip(a_L.clone()).fold(ux_CL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let aLi: FE = ECScalar::from(&x.1);
+                    let aLi = Scalar::<Secp256k1>::from(&x.1);
                     let aLi_GRi: GE = x.0 * &aLi;
                     acc.add_point(&aLi_GRi.get_element())
                 } else {
@@ -84,7 +84,7 @@ impl InnerProductArg {
             });
             let L = H_L.iter().zip(b_R.clone()).fold(aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi: FE = ECScalar::from(&x.1);
+                    let bRi = Scalar::<Secp256k1>::from(&x.1);
                     let bRi_HLi: GE = x.0 * &bRi;
                     acc.add_point(&bRi_HLi.get_element())
                 } else {
@@ -96,11 +96,11 @@ impl InnerProductArg {
             // since 0 is an invalid secret key!
             //
             // R = <a_R * G_L> + <b_L * H_R> + c_R * ux
-            let c_R_fe: FE = ECScalar::from(&c_R);
+            let c_R_fe = Scalar::<Secp256k1>::from(&c_R);
             let ux_CR: GE = ux * &c_R_fe;
             let aR_GL = G_L.iter().zip(a_R.clone()).fold(ux_CR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let aRi: FE = ECScalar::from(&x.1);
+                    let aRi = Scalar::<Secp256k1>::from(&x.1);
                     let aRi_GLi: GE = x.0 * &aRi;
                     acc.add_point(&aRi_GLi.get_element())
                 } else {
@@ -109,7 +109,7 @@ impl InnerProductArg {
             });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi: FE = ECScalar::from(&x.1);
+                    let bLi = Scalar::<Secp256k1>::from(&x.1);
                     let bLi_HRi: GE = x.0 * &bLi;
                     acc.add_point(&bLi_HRi.get_element())
                 } else {
@@ -195,8 +195,8 @@ impl InnerProductArg {
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
-            let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
+            let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
+            let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
             let G_new = (0..n)
                 .map(|i| {
@@ -227,8 +227,8 @@ impl InnerProductArg {
             return ip.verify(&G_new, &H_new, ux, &P_tag);
         }
 
-        let a_fe: FE = ECScalar::from(&self.a_tag);
-        let b_fe: FE = ECScalar::from(&self.b_tag);
+        let a_fe = Scalar::<Secp256k1>::from(&self.a_tag);
+        let b_fe = Scalar::<Secp256k1>::from(&self.b_tag);
         let c = a_fe.mul(&b_fe.get_element());
         let Ga = &G[0] * &a_fe;
         let Hb = &H[0] * &b_fe;
@@ -322,12 +322,12 @@ impl InnerProductArg {
         points.extend_from_slice(&self.R);
 
         let c = BigInt::mod_mul(&self.a_tag, &self.b_tag, &order);
-        let ux_c = ux * &ECScalar::from(&c);
+        let ux_c = ux * &Scalar::<Secp256k1>::from(&c);
 
         let tot_len = points.len();
 
         let expect_P = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
+            .map(|i| points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
             .fold(ux_c, |acc, x| acc + x as GE);
 
         if *P == expect_P {
@@ -360,7 +360,7 @@ mod tests {
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::secp256_k1::FE;
     use curv::elliptic::curves::secp256_k1::GE;
-    use curv::elliptic::curves::traits::*;
+    use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
     use curv::BigInt;
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
@@ -414,7 +414,7 @@ mod tests {
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert()
             })
             .collect::<Vec<FE>>();
@@ -422,17 +422,17 @@ mod tests {
         let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe = Scalar::<Secp256k1>::from(&c);
         let ux_c: GE = &Gx * &c_fe;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
             .fold(ux_c, |acc, x: GE| acc + x as GE);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
             .fold(a_G, |acc, x: GE| acc + x as GE);
@@ -492,7 +492,7 @@ mod tests {
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert()
             })
             .collect::<Vec<FE>>();
@@ -500,17 +500,17 @@ mod tests {
         let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe = Scalar::<Secp256k1>::from(&c);
         let ux_c: GE = &Gx * &c_fe;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
             .fold(ux_c, |acc, x: GE| acc + x as GE);
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
             .fold(a_G, |acc, x: GE| acc + x as GE);
@@ -557,7 +557,7 @@ mod tests {
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert()
             })
             .collect::<Vec<FE>>();
@@ -565,19 +565,19 @@ mod tests {
         let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
-        let c_fe: FE = ECScalar::from(&c);
+        let c_fe = Scalar::<Secp256k1>::from(&c);
 
         let ux_c: GE = &Gx * &c_fe;
 
         let a_G = (0..m)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
             .fold(ux_c, |acc, x: GE| acc + x as GE);
         let P = (0..m)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
             .fold(a_G, |acc, x: GE| acc + x as GE);
