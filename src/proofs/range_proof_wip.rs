@@ -29,9 +29,6 @@ use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
 use curv::BigInt;
 use sha2::{Sha256, Sha512};
 
-type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
-
 use itertools::iterate;
 use proofs::range_proof::generate_random_point;
 use proofs::weighted_inner_product::WeightedInnerProdArg;
@@ -608,9 +605,6 @@ mod tests {
     use curv::arithmetic::traits::*;
     use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
     use curv::BigInt;
-
-    type GE = curv::elliptic::curves::secp256_k1::GE;
-    type FE = curv::elliptic::curves::secp256_k1::FE;
 
     use proofs::range_proof_wip::{RangeProofWIP, StatementRP};
 

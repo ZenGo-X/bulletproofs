@@ -22,9 +22,6 @@ use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
 use curv::BigInt;
 use sha2::{Sha256, Sha512};
 
-type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
-
 use Errors::{self, InnerProductError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
