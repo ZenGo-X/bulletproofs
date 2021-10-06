@@ -29,8 +29,6 @@ mod bench_range_proof {
     use curv::cryptographic_primitives::hashing::traits::*;
     use curv::elliptic::curves::{Scalar, traits::*, secp256_k1::Secp256k1};
     use curv::BigInt;
-    type GE = curv::elliptic::curves::secp256_k1::GE;
-    type FE = curv::elliptic::curves::secp256_k1::FE;
 
     static AGGREGATION_SIZES: [usize; 6] = [1, 2, 4, 8, 16, 32];
 
@@ -76,7 +74,7 @@ mod bench_range_proof {
                     })
                     .collect::<Vec<FE>>();
 
-                let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+                let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
                 let ped_com_vec = (0..m)
                     .map(|i| {
@@ -147,7 +145,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -208,7 +206,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
         });
@@ -255,7 +253,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -316,7 +314,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -377,7 +375,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
         });
@@ -424,7 +422,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -485,7 +483,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
         });
@@ -532,7 +530,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -593,7 +591,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
         });
@@ -640,7 +638,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -701,7 +699,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
         });
@@ -748,7 +746,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -809,7 +807,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n))
         });
@@ -856,7 +854,7 @@ mod bench_range_proof {
                 })
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_i| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_i| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -932,7 +930,7 @@ mod bench_wip_range_proof {
                     .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                     .collect::<Vec<FE>>();
 
-                let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+                let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
                 let ped_com_vec = (0..m)
                     .map(|i| {
@@ -975,7 +973,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -1009,7 +1007,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| {
                 RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
@@ -1038,7 +1036,7 @@ mod bench_wip_range_proof {
                     .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                     .collect::<Vec<FE>>();
 
-                let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+                let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
                 let ped_com_vec = (0..m)
                     .map(|i| {
@@ -1075,7 +1073,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| {
                 RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
@@ -1102,7 +1100,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -1137,7 +1135,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| {
                 RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
@@ -1164,7 +1162,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -1199,7 +1197,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| {
                 RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
@@ -1226,7 +1224,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -1261,7 +1259,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| {
                 RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
@@ -1288,7 +1286,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {
@@ -1323,7 +1321,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             b.iter(|| {
                 RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
@@ -1350,7 +1348,7 @@ mod bench_wip_range_proof {
                 .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
                 .collect::<Vec<FE>>();
 
-            let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+            let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
             let ped_com_vec = (0..m)
                 .map(|i| {

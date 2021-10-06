@@ -56,8 +56,8 @@ impl RangeProof {
         let num_of_proofs = secret.len();
         //num of proofs times bit length
         let nm = num_of_proofs * bit_length;
-        let alpha: FE = ECScalar::new_random();
-        let rho: FE = ECScalar::new_random();
+        let alpha: FE = Scalar::<Secp256k1>::random();
+        let rho: FE = Scalar::<Secp256k1>::random();
 
         let g_vec = g_vec.to_vec();
         let h_vec = h_vec.to_vec();
@@ -108,8 +108,8 @@ impl RangeProof {
             }
         });
 
-        let SR = (0..nm).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
-        let SL = (0..nm).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let SR = (0..nm).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
+        let SL = (0..nm).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         S = SL.iter().zip(&SR).fold(S, |acc, x| {
             let g_vec_i_SLi = &g_vec[index] * x.0;
@@ -159,8 +159,8 @@ impl RangeProof {
             })
             .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
-        let tau1: FE = ECScalar::new_random();
-        let tau2: FE = ECScalar::new_random();
+        let tau1: FE = Scalar::<Secp256k1>::random();
+        let tau2: FE = Scalar::<Secp256k1>::random();
         let t1_fe = Scalar::<Secp256k1>::from(&t1);
         let t2_fe = Scalar::<Secp256k1>::from(&t2);
         let T1 = G * &t1_fe + H * &tau1;
@@ -812,7 +812,7 @@ mod tests {
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -855,7 +855,7 @@ mod tests {
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -906,7 +906,7 @@ mod tests {
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -960,7 +960,7 @@ mod tests {
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(Scalar::<Secp256k1>::from(&bad_v));
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -1010,7 +1010,7 @@ mod tests {
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -1063,7 +1063,7 @@ mod tests {
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
             .collect::<Vec<FE>>();
 
-        let r_vec = (0..m).map(|_| ECScalar::new_random()).collect::<Vec<FE>>();
+        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<FE>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {

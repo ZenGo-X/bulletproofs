@@ -393,20 +393,20 @@ mod tests {
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
         let c = super::inner_product(&a, &b);
 
-        let y: FE = ECScalar::new_random();
+        let y: FE = Scalar::<Secp256k1>::random();
         let order = FE::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -471,20 +471,20 @@ mod tests {
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
         let c = super::inner_product(&a, &b);
 
-        let y: FE = ECScalar::new_random();
+        let y: FE = Scalar::<Secp256k1>::random();
         let order = FE::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -549,7 +549,7 @@ mod tests {
 
         let c = super::inner_product(&a, &b);
 
-        let y: FE = ECScalar::new_random();
+        let y: FE = Scalar::<Secp256k1>::random();
         let order = FE::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -653,14 +653,14 @@ mod tests {
         let n: usize = 9;
         let mut a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
 
         let mut b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();

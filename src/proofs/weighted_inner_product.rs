@@ -106,7 +106,7 @@ impl WeightedInnerProdArg {
             // L = <yninv_aL * G_R> + <b_R * H_L> + (c_L * g) + (d_L * h)
             let c_L_fe = Scalar::<Secp256k1>::from(&c_L);
             let g_cL: GE = g * &c_L_fe;
-            let d_L_fe: FE = ECScalar::new_random();
+            let d_L_fe: FE = Scalar::<Secp256k1>::random();
             let h_dL = h * &d_L_fe;
             let g_cL_h_dL = g_cL.add_point(&h_dL.get_element());
             let yninv_aL_GR = G_R.iter().zip(yninv_aL.clone()).fold(g_cL_h_dL, |acc, x| {
@@ -134,7 +134,7 @@ impl WeightedInnerProdArg {
             // R = <yn_aR * G_R> + <b_R * H_L> + (c_R * g) + (d_R * h)
             let c_R_fe = Scalar::<Secp256k1>::from(&c_R);
             let g_cR: GE = g * &c_R_fe;
-            let d_R_fe: FE = ECScalar::new_random();
+            let d_R_fe: FE = Scalar::<Secp256k1>::random();
             let h_dR = h * &d_R_fe;
             let g_cR_h_dR = g_cR.add_point(&h_dR.get_element());
             let aR_GL = G_L.iter().zip(yn_aR.clone()).fold(g_cR_h_dR, |acc, x| {
@@ -213,13 +213,13 @@ impl WeightedInnerProdArg {
                 &G_hat, &H_hat, &g, &h, &P, &a_hat, &b_hat, &alpha_hat, &y, L_vec, R_vec,
             );
         } else {
-            let r: FE = ECScalar::new_random();
+            let r: FE = Scalar::<Secp256k1>::random();
             let r_bn: BigInt = r.to_big_int();
-            let s: FE = ECScalar::new_random();
+            let s: FE = Scalar::<Secp256k1>::random();
             let s_bn: BigInt = s.to_big_int();
-            let delta: FE = ECScalar::new_random();
+            let delta: FE = Scalar::<Secp256k1>::random();
             let delta_bn: BigInt = delta.to_big_int();
-            let eta: FE = ECScalar::new_random();
+            let eta: FE = Scalar::<Secp256k1>::random();
             let eta_bn: BigInt = eta.to_big_int();
 
             // compute A
@@ -590,14 +590,14 @@ mod tests {
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
@@ -606,10 +606,10 @@ mod tests {
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
-        let alpha_fe: FE = ECScalar::new_random();
+        let alpha_fe: FE = Scalar::<Secp256k1>::random();
         let alpha = alpha_fe.to_big_int();
 
-        let y: FE = ECScalar::new_random();
+        let y: FE = Scalar::<Secp256k1>::random();
         let order = FE::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -681,14 +681,14 @@ mod tests {
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
@@ -697,10 +697,10 @@ mod tests {
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
-        let alpha_fe: FE = ECScalar::new_random();
+        let alpha_fe: FE = Scalar::<Secp256k1>::random();
         let alpha = alpha_fe.to_big_int();
 
-        let y: FE = ECScalar::new_random();
+        let y: FE = Scalar::<Secp256k1>::random();
         let order = FE::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -775,10 +775,10 @@ mod tests {
             HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
-        let alpha_fe: FE = ECScalar::new_random();
+        let alpha_fe: FE = Scalar::<Secp256k1>::random();
         let alpha = alpha_fe.to_big_int();
 
-        let y: FE = ECScalar::new_random();
+        let y: FE = Scalar::<Secp256k1>::random();
         let order = FE::q();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
@@ -920,14 +920,14 @@ mod tests {
         let n: usize = 9;
         let mut a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
 
         let mut b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
+                let rand: FE = Scalar::<Secp256k1>::random();
                 rand.to_big_int()
             })
             .collect();
