@@ -356,8 +356,8 @@ impl WeightedInnerProdArg {
         // left hand side of verification
         // LHS = e^2*P + e*A + B
         let P_e2 = P * &e_sq_fe;
-        let Ae = self.a_tag * &e;
-        let left = P_e2 + Ae + self.b_tag;
+        let Ae = &self.a_tag * &e;
+        let left = P_e2 + Ae + &self.b_tag;
 
         // RHS = (er')*G + (es')*H + (r's'y)*g + (delta')*h
         let er_prime = BigInt::mod_mul(&e_bn, &self.r_prime, &order);
@@ -499,17 +499,17 @@ impl WeightedInnerProdArg {
         points.extend_from_slice(hi_tag);
         points.extend_from_slice(&self.L);
         points.extend_from_slice(&self.R);
-        points.push(*g);
+        points.push(g.clone());
 
         let h_delta_prime = h * &Scalar::<Secp256k1>::from(&self.delta_prime);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
+            .map(|i| &points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
             .fold(h_delta_prime, |acc, x| acc + x as Point<Secp256k1>);
 
-        let Ae = self.a_tag * &Scalar::<Secp256k1>::from(&e_bn);
+        let Ae = &self.a_tag * &Scalar::<Secp256k1>::from(&e_bn);
         let Pe_sq = P * &Scalar::<Secp256k1>::from(&e_sq_bn);
-        let rhs = Pe_sq + Ae + self.b_tag;
+        let rhs = Pe_sq + Ae + &self.b_tag;
 
         if lhs == rhs {
             Ok(())

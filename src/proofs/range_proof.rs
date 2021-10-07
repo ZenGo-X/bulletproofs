@@ -164,8 +164,8 @@ impl RangeProof {
         let T2 = G * &t2_fe + H * &tau2;
 
         let fs_challenge = Sha256::new().chain_points([&T1, &T2, G, H]).result_scalar();
-        let fs_challenge_square = fs_challenge * &fs_challenge;
-        let taux_1 = fs_challenge * &tau1;
+        let fs_challenge_square = &fs_challenge * &fs_challenge;
+        let taux_1 = &fs_challenge * &tau1;
         let taux_2 = fs_challenge_square * &tau2;
         let taux_3 = (0..num_of_proofs)
             .map(|i| {
@@ -180,7 +180,7 @@ impl RangeProof {
 
         let Lp = (0..nm)
             .map(|i| {
-                let Lp_1 = (SL[i] * &fs_challenge).to_bigint();
+                let Lp_1 = (&SL[i] * &fs_challenge).to_bigint();
                 let Lp_2 = BigInt::mod_sub(&aL[i], &z_bn, &order);
                 BigInt::mod_add(&Lp_1, &Lp_2, &order)
             })
@@ -188,7 +188,7 @@ impl RangeProof {
 
         let Rp = (0..nm)
             .map(|i| {
-                let Rp_1 = (SR[i] * &fs_challenge).to_bigint();
+                let Rp_1 = (&SR[i] * &fs_challenge).to_bigint();
 
                 let j = i / bit_length + 2;
                 let k = i % bit_length;
@@ -316,7 +316,7 @@ impl RangeProof {
         let fs_challenge = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
-        let fs_challenge_square = fs_challenge * &fs_challenge;
+        let fs_challenge_square = &fs_challenge * &fs_challenge;
 
         // eq 65:
         let Gtx = G * &self.tx;
@@ -440,7 +440,7 @@ impl RangeProof {
         let fs_challenge = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
-        let fs_challenge_square = fs_challenge * &fs_challenge;
+        let fs_challenge_square = &fs_challenge * &fs_challenge;
 
         // eq 65:
         let Gtx = G * &self.tx;
@@ -547,7 +547,7 @@ impl RangeProof {
         let challenge_x: Scalar<Secp256k1> = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
-        let challenge_x_sq = challenge_x * &challenge_x;
+        let challenge_x_sq = &challenge_x * &challenge_x;
 
         let x_u = Sha256::new()
             .chain_bigint(&self.tau_x.to_bigint())
@@ -730,20 +730,20 @@ impl RangeProof {
         let mut points: Vec<Point<Secp256k1>> = Vec::with_capacity(2 * nm + 2 * lg_nm + m + 6);
         points.extend_from_slice(g_vec);
         points.extend_from_slice(h_vec);
-        points.push(*G);
+        points.push(G.clone());
         // points.push(*H);
         // points.push(self.A);
-        points.push(self.S);
+        points.push(self.S.clone());
         points.extend_from_slice(&self.inner_product_proof.L);
         points.extend_from_slice(&self.inner_product_proof.R);
         points.extend_from_slice(&ped_com);
-        points.push(self.T1);
-        points.push(self.T2);
+        points.push(self.T1.clone());
+        points.push(self.T2.clone());
 
         let H_times_scalar_H = H * &Scalar::<Secp256k1>::from(&scalar_H);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
+            .map(|i| &points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
             .fold(H_times_scalar_H, |acc, x| acc + x as Point<Secp256k1>);
 
         // single multi-exponentiation check

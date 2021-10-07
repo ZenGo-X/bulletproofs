@@ -226,7 +226,7 @@ impl InnerProductArg {
 
         let a_fe = Scalar::<Secp256k1>::from(&self.a_tag);
         let b_fe = Scalar::<Secp256k1>::from(&self.b_tag);
-        let c = a_fe * &b_fe;
+        let c = &a_fe * &b_fe;
         let Ga = &G[0] * &a_fe;
         let Hb = &H[0] * &b_fe;
         let ux_c = ux * &c;
@@ -324,7 +324,7 @@ impl InnerProductArg {
         let tot_len = points.len();
 
         let expect_P = (0..tot_len)
-            .map(|i| points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
+            .map(|i| &points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
             .fold(ux_c, |acc, x| acc + x as Point<Secp256k1>);
 
         if *P == expect_P {
