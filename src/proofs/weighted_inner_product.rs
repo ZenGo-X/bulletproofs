@@ -105,12 +105,12 @@ impl WeightedInnerProdArg {
             let g_cL: Point<Secp256k1> = g * &c_L_fe;
             let d_L_fe = Scalar::<Secp256k1>::random();
             let h_dL = h * &d_L_fe;
-            let g_cL_h_dL = g_cL.add_point(&h_dL.get_element());
+            let g_cL_h_dL = g_cL + &h_dL;
             let yninv_aL_GR = G_R.iter().zip(yninv_aL.clone()).fold(g_cL_h_dL, |acc, x| {
                 if x.1 != BigInt::zero() {
                     let aLi = Scalar::<Secp256k1>::from(&x.1);
                     let aLi_GRi: Point<Secp256k1> = x.0 * &aLi;
-                    acc.add_point(&aLi_GRi.get_element())
+                    acc + &aLi_GRi
                 } else {
                     acc
                 }
@@ -119,7 +119,7 @@ impl WeightedInnerProdArg {
                 if x.1 != &BigInt::zero() {
                     let bRi = Scalar::<Secp256k1>::from(&x.1);
                     let bRi_HLi: Point<Secp256k1> = x.0 * &bRi;
-                    acc.add_point(&bRi_HLi.get_element())
+                    acc + &bRi_HLi
                 } else {
                     acc
                 }
@@ -133,12 +133,12 @@ impl WeightedInnerProdArg {
             let g_cR: Point<Secp256k1> = g * &c_R_fe;
             let d_R_fe = Scalar::<Secp256k1>::random();
             let h_dR = h * &d_R_fe;
-            let g_cR_h_dR = g_cR.add_point(&h_dR.get_element());
+            let g_cR_h_dR = g_cR + &h_dR;
             let aR_GL = G_L.iter().zip(yn_aR.clone()).fold(g_cR_h_dR, |acc, x| {
                 if x.1 != BigInt::zero() {
                     let aRi = Scalar::<Secp256k1>::from(&x.1);
                     let aRi_GLi: Point<Secp256k1> = x.0 * &aRi;
-                    acc.add_point(&aRi_GLi.get_element())
+                    acc + &aRi_GLi
                 } else {
                     acc
                 }
@@ -147,7 +147,7 @@ impl WeightedInnerProdArg {
                 if x.1 != &BigInt::zero() {
                     let bLi = Scalar::<Secp256k1>::from(&x.1);
                     let bLi_HRi: Point<Secp256k1> = x.0 * &bLi;
-                    acc.add_point(&bLi_HRi.get_element())
+                    acc + &bLi_HRi
                 } else {
                     acc
                 }

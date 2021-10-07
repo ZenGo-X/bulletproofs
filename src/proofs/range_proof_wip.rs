@@ -143,7 +143,7 @@ impl RangeProofWIP {
         let mut A = H * &alpha;
         A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if x.1 {
-                acc.add_point(&x.0.get_element())
+                acc + &x.0
             } else {
                 acc
             }
