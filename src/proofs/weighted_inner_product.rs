@@ -415,7 +415,7 @@ impl WeightedInnerProdArg {
         );
 
         // compute challenge e
-        let e = Sha256::new()
+        let e: Scalar<Secp256k1> = Sha256::new()
             .chain_points([&self.a_tag, &self.b_tag, &g, &h])
             .result_scalar();
         let e_bn = e.to_bigint();
@@ -427,8 +427,8 @@ impl WeightedInnerProdArg {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = Sha256::new()
-                .chain_points([&Li, &Ri, &g, &h])
+            let x: Scalar<Secp256k1> = Sha256::new()
+                .chain_points([Li, Ri, g, h])
                 .result_scalar();
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();

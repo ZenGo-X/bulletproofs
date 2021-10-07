@@ -409,7 +409,7 @@ impl RangeProofWIP {
         let y_bn = y.to_bigint();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
@@ -450,7 +450,7 @@ impl RangeProofWIP {
 
         // compute challenge e
 
-        let e = Sha256::new()
+        let e: Scalar<Secp256k1> = Sha256::new()
             .chain_points([&wip.a_tag, &wip.b_tag, &g, &h])
             .result_scalar();
         let e_bn = e.to_bigint();
@@ -462,8 +462,8 @@ impl RangeProofWIP {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in wip.L.iter().zip(wip.R.iter()) {
-            let x = Sha256::new()
-                .chain_points([&Li, &Ri, &g, &h])
+            let x: Scalar<Secp256k1> = Sha256::new()
+                .chain_points([Li, Ri, g, h])
                 .result_scalar();
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
