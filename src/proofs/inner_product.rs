@@ -72,7 +72,7 @@ impl InnerProductArg {
             let ux_CL: Point<Secp256k1> = ux * &c_L_fe;
             let aL_GR = G_R.iter().zip(a_L.clone()).fold(ux_CL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let aLi = Scalar::<Secp256k1>::from(&x.1);
+                    let aLi = Scalar::<Secp256k1>::from(x.1);
                     let aLi_GRi: Point<Secp256k1> = x.0 * &aLi;
                     acc.add_point(&aLi_GRi.get_element())
                 } else {
