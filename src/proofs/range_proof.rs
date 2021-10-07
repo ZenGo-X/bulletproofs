@@ -119,7 +119,7 @@ impl RangeProof {
         let y = Sha256::new().chain_points([&A, &S]).result_scalar();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
 
         let one_fe = Scalar::<Secp256k1>::from(&one);
@@ -206,10 +206,11 @@ impl RangeProof {
         });
         let tx_fe = Scalar::<Secp256k1>::from(&tx);
 
-        let challenge_x = Sha256::new()
-            .chain_points([&tau_x.to_bigint(), &miu.to_bigint(), &tx])
+        let challenge_x: Scalar<Secp256k1> = Sha256::new()
+            .chain_bigint(&tau_x.to_bigint())
+            .chain_bigint(&miu.to_bigint())
+            .chain_bigint(&tx)
             .result_scalar();
-        let challenge_x = Scalar::<Secp256k1>::from(&challenge_x);
         let Gx = G * &challenge_x;
         // P' = u^{xc}
         let P = &Gx * &tx_fe;
