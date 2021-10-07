@@ -34,9 +34,9 @@ pub struct RangeProof {
     S: Point<Secp256k1>,
     T1: Point<Secp256k1>,
     T2: Point<Secp256k1>,
-    tau_x,
-    miu,
-    tx,
+    tau_x: Scalar<Secp256k1>,
+    miu: Scalar<Secp256k1>,
+    tx: Scalar<Secp256k1>,
     inner_product_proof: InnerProductArg,
 }
 
@@ -117,7 +117,7 @@ impl RangeProof {
         });
 
         let y = Sha256::new().chain_points([&A, &S]).result_scalar();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
@@ -269,7 +269,7 @@ impl RangeProof {
         let y = Sha256::new()
             .chain_points([&self.A, &self.S])
             .result_scalar();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
@@ -393,7 +393,7 @@ impl RangeProof {
         let y = Sha256::new()
             .chain_points([&self.A, &self.S])
             .result_scalar();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
@@ -537,7 +537,7 @@ impl RangeProof {
             .result_scalar();
         let y_bn = y.to_bigint();
         let y_inv_bn = BigInt::mod_inv(&y_bn, &order).unwrap();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();

@@ -55,7 +55,7 @@ impl StatementRP {
         let nm = n * m;
 
         // G,H - points for pederson commitment: com  = vG + rH
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &Scalar::<Secp256k1>::q());
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -158,7 +158,7 @@ impl RangeProofWIP {
 
         let y = Sha256::new().chain_points([&A]).result_scalar();
         let y_bn = y.to_bigint();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
@@ -281,7 +281,7 @@ impl RangeProofWIP {
 
         let y = Sha256::new().chain_points([&self.A]).result_scalar();
         let y_bn = y.to_bigint();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
@@ -407,7 +407,7 @@ impl RangeProofWIP {
         // compute challenges
         let y = Sha256::new().chain_points([&self.A]).result_scalar();
         let y_bn = y.to_bigint();
-        let base_point: Point<Secp256k1> = ECPoint::generator();
+        let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
