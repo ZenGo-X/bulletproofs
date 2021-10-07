@@ -755,7 +755,7 @@ impl RangeProof {
 }
 
 pub fn generate_random_point(bytes: &[u8]) -> Point<Secp256k1> {
-    let result: Result<Point<Secp256k1>, _> = ECPoint::from_bytes(&bytes);
+    let result: Result<Point<Secp256k1>, _> = Point::<Secp256k1>::from_bytes(&bytes);
     if result.is_ok() {
         return result.unwrap();
     } else {
