@@ -218,7 +218,7 @@ impl RangeProof {
             .map(|i| {
                 //     let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 //     yi_fe.invert()
-                yi[i].invert()
+                yi[i].invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 

@@ -466,7 +466,7 @@ impl RangeProofWIP {
                 .chain_points([&Li, &Ri, &g, &h])
                 .result_scalar();
             let x_bn = x.to_bigint();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =

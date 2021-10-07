@@ -117,7 +117,7 @@ impl InnerProductArg {
             let x = Sha256::new().chain_points([&L, &R, &ux]).result_scalar();
             let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::group_order();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
 
             let a_new = (0..n)
                 .map(|i| {
@@ -188,7 +188,7 @@ impl InnerProductArg {
                 .result_scalar();
             let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::group_order();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
@@ -270,7 +270,7 @@ impl InnerProductArg {
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
             let x = Sha256::new().chain_points([Li, Ri, ux]).result_scalar();
             let x_bn = x.to_bigint();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
@@ -410,7 +410,7 @@ mod tests {
         let yi_inv = (0..n)
             .map(|i| {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
-                yi_fe.invert()
+                yi_fe.invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 
@@ -488,7 +488,7 @@ mod tests {
         let yi_inv = (0..n)
             .map(|i| {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
-                yi_fe.invert()
+                yi_fe.invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 
@@ -553,7 +553,7 @@ mod tests {
         let yi_inv = (0..n)
             .map(|i| {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
-                yi_fe.invert()
+                yi_fe.invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 

@@ -159,7 +159,7 @@ impl WeightedInnerProdArg {
             let x_bn = x.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_sq_inv_bn = BigInt::mod_inv(&x_sq_bn, &order).unwrap();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
 
             let a_hat = (0..n)
                 .map(|i| {
@@ -301,7 +301,7 @@ impl WeightedInnerProdArg {
                 .result_scalar();
             let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::group_order();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
                 BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
@@ -431,7 +431,7 @@ impl WeightedInnerProdArg {
                 .chain_points([&Li, &Ri, &g, &h])
                 .result_scalar();
             let x_bn = x.to_bigint();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
@@ -612,7 +612,7 @@ mod tests {
         let yi_inv = (0..n)
             .map(|i| {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
-                yi_fe.invert()
+                yi_fe.invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 
@@ -703,7 +703,7 @@ mod tests {
         let yi_inv = (0..n)
             .map(|i| {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
-                yi_fe.invert()
+                yi_fe.invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 
@@ -781,7 +781,7 @@ mod tests {
         let yi_inv = (0..n)
             .map(|i| {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
-                yi_fe.invert()
+                yi_fe.invert().unwrap()
             })
             .collect::<Vec<Scalar::<Secp256k1>>>();
 
