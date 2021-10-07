@@ -174,9 +174,9 @@ impl RangeProof {
                 let z_j_fe = Scalar::<Secp256k1>::from(&z_j);
                 z_j_fe * &blinding[i]
             })
-            .fold(taux_2, |acc, x| acc.add(&x.get_element()));
-        let tau_x = taux_1.add(&taux_3.get_element());
-        let miu = (rho * &fs_challenge).add(&alpha.get_element());
+            .fold(taux_2, |acc, x| acc + &x);
+        let tau_x = taux_1 + &taux_3;
+        let miu = (rho * &fs_challenge) + &alpha;
 
         let Lp = (0..nm)
             .map(|i| {
