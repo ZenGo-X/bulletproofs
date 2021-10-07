@@ -56,7 +56,7 @@ impl StatementRP {
 
         // G,H - points for pederson commitment: com  = vG + rH
         let G = Point::<Secp256k1>::generator();
-        let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &Scalar::<Secp256k1>::q());
+        let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &Scalar::<Secp256k1>::group_order());
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
 
@@ -108,7 +108,7 @@ impl RangeProofWIP {
         let N = g_vec.len();
         let two = BigInt::from(2);
         let one = BigInt::from(1);
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(h_vec.len(), N);
@@ -277,7 +277,7 @@ impl RangeProofWIP {
 
         let two = BigInt::from(2);
         let one = BigInt::from(1);
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         let y = Sha256::new().chain_points([&self.A]).result_scalar();
         let y_bn = y.to_bigint();
@@ -390,7 +390,7 @@ impl RangeProofWIP {
         let g = &stmt.G;
         let h = &stmt.H;
         // let n = stmt.bit_length;
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let lg_nm = wip.L.len();
         let two = BigInt::from(2);
         let one = BigInt::from(1);

@@ -63,7 +63,7 @@ impl RangeProof {
         let mut S = H * &rho;
         let two = BigInt::from(2);
         let one = BigInt::from(1);
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         //concat all secrets:
         secret.reverse();
@@ -273,7 +273,7 @@ impl RangeProof {
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let z_minus = BigInt::mod_sub(&order, &z.to_bigint(), &order);
         let z_minus_fe = Scalar::<Secp256k1>::from(&z_minus);
         let z_squared = BigInt::mod_pow(&z.to_bigint(), &BigInt::from(2), &order);
@@ -347,7 +347,7 @@ impl RangeProof {
         // P' = u^{xc}
 
         let P = &Gx * &self.tx;
-        let minus_miu = BigInt::mod_sub(&Scalar::<Secp256k1>::q(), &self.miu.to_bigint(), &Scalar::<Secp256k1>::q());
+        let minus_miu = BigInt::mod_sub(&Scalar::<Secp256k1>::group_order(), &self.miu.to_bigint(), &Scalar::<Secp256k1>::group_order());
         let minus_miu_fe = Scalar::<Secp256k1>::from(&minus_miu);
         let Hmiu = H * &minus_miu_fe;
         let Sx = &self.S * &fs_challenge;
@@ -397,7 +397,7 @@ impl RangeProof {
         let yG: Point<Secp256k1> = base_point * &y;
         let z = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let z_minus = BigInt::mod_sub(&order, &z.to_bigint(), &order);
         let z_minus_fe = Scalar::<Secp256k1>::from(&z_minus);
         let z_squared = BigInt::mod_pow(&z.to_bigint(), &BigInt::from(2), &order);
@@ -471,7 +471,7 @@ impl RangeProof {
         // P' = u^{xc}
 
         let P = &Gx * &self.tx;
-        let minus_miu = BigInt::mod_sub(&Scalar::<Secp256k1>::q(), &self.miu.to_bigint(), &Scalar::<Secp256k1>::q());
+        let minus_miu = BigInt::mod_sub(&Scalar::<Secp256k1>::group_order(), &self.miu.to_bigint(), &Scalar::<Secp256k1>::group_order());
         let minus_miu_fe = Scalar::<Secp256k1>::from(&minus_miu);
         let Hmiu = H * &minus_miu_fe;
         let Sx = &self.S * &fs_challenge;
@@ -517,7 +517,7 @@ impl RangeProof {
         let m = ped_com.len();
         let nm = m * n;
         let lg_nm = self.inner_product_proof.L.len();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let two = BigInt::from(2);
         let one = BigInt::from(1);
         let zero = BigInt::zero();
@@ -761,7 +761,7 @@ pub fn generate_random_point(bytes: &[u8]) -> Point<Secp256k1> {
     } else {
         let two = BigInt::from(2);
         let bn = BigInt::from_bytes(bytes);
-        let bn_times_two = BigInt::mod_mul(&bn, &two, &Scalar::<Secp256k1>::q());
+        let bn_times_two = BigInt::mod_mul(&bn, &two, &Scalar::<Secp256k1>::group_order());
         let bytes = BigInt::to_bytes(&bn_times_two);
         return generate_random_point(&bytes);
     }

@@ -58,7 +58,7 @@ impl WeightedInnerProdArg {
         mut R_vec: Vec<Point<Secp256k1>>,
     ) -> WeightedInnerProdArg {
         let n = G.len();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -279,7 +279,7 @@ impl WeightedInnerProdArg {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -300,7 +300,7 @@ impl WeightedInnerProdArg {
                 .chain_points([&self.L[0], &self.R[0], &g, &h])
                 .result_scalar();
             let x_bn = x.to_bigint();
-            let order = Scalar::<Secp256k1>::q();
+            let order = Scalar::<Secp256k1>::group_order();
             let x_inv_fe = x.invert();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
@@ -396,7 +396,7 @@ impl WeightedInnerProdArg {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -525,7 +525,7 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
         b.len(),
         "weighted_inner_product(a,b): lengths of vectors do not match"
     );
-    let order = Scalar::<Secp256k1>::q();
+    let order = Scalar::<Secp256k1>::group_order();
     let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
         .take(a.len())
         .collect::<Vec<BigInt>>();
@@ -604,7 +604,7 @@ mod tests {
         let alpha = alpha_fe.to_bigint();
 
         let y = Scalar::<Secp256k1>::random();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
@@ -695,7 +695,7 @@ mod tests {
         let alpha = alpha_fe.to_bigint();
 
         let y = Scalar::<Secp256k1>::random();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
@@ -773,7 +773,7 @@ mod tests {
         let alpha = alpha_fe.to_bigint();
 
         let y = Scalar::<Secp256k1>::random();
-        let order = Scalar::<Secp256k1>::q();
+        let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
             .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
             .collect::<Vec<BigInt>>();
