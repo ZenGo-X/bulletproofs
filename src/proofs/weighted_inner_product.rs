@@ -117,7 +117,7 @@ impl WeightedInnerProdArg {
             });
             let L = H_L.iter().zip(b_R.clone()).fold(yninv_aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi = Scalar::<Secp256k1>::from(&x.1);
+                    let bRi = Scalar::<Secp256k1>::from(x.1);
                     let bRi_HLi: Point<Secp256k1> = x.0 * &bRi;
                     acc + &bRi_HLi
                 } else {
@@ -145,7 +145,7 @@ impl WeightedInnerProdArg {
             });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi = Scalar::<Secp256k1>::from(&x.1);
+                    let bLi = Scalar::<Secp256k1>::from(x.1);
                     let bLi_HRi: Point<Secp256k1> = x.0 * &bLi;
                     acc + &bLi_HRi
                 } else {

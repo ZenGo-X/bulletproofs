@@ -164,23 +164,23 @@ impl RangeProof {
         let T2 = G * &t2_fe + H * &tau2;
 
         let fs_challenge = Sha256::new().chain_points([&T1, &T2, G, H]).result_scalar();
-        let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
-        let taux_1 = fs_challenge.mul(&tau1.get_element());
-        let taux_2 = fs_challenge_square.mul(&tau2.get_element());
+        let fs_challenge_square = fs_challenge * &fs_challenge;
+        let taux_1 = fs_challenge * &tau1;
+        let taux_2 = fs_challenge_square * &tau2;
         let taux_3 = (0..num_of_proofs)
             .map(|i| {
                 let j = BigInt::mod_add(&two, &BigInt::from(i as u32), &order);
                 let z_j = BigInt::mod_pow(&z_bn, &j, &order);
                 let z_j_fe = Scalar::<Secp256k1>::from(&z_j);
-                z_j_fe.mul(&blinding[i].get_element())
+                z_j_fe * &blinding[i]
             })
             .fold(taux_2, |acc, x| acc.add(&x.get_element()));
         let tau_x = taux_1.add(&taux_3.get_element());
-        let miu = (rho.mul(&fs_challenge.get_element())).add(&alpha.get_element());
+        let miu = (rho * &fs_challenge).add(&alpha.get_element());
 
         let Lp = (0..nm)
             .map(|i| {
-                let Lp_1 = (SL[i].mul(&fs_challenge.get_element())).to_bigint();
+                let Lp_1 = (SL[i] * &fs_challenge).to_bigint();
                 let Lp_2 = BigInt::mod_sub(&aL[i], &z_bn, &order);
                 BigInt::mod_add(&Lp_1, &Lp_2, &order)
             })
@@ -188,7 +188,7 @@ impl RangeProof {
 
         let Rp = (0..nm)
             .map(|i| {
-                let Rp_1 = (SR[i].mul(&fs_challenge.get_element())).to_bigint();
+                let Rp_1 = (SR[i] * &fs_challenge).to_bigint();
 
                 let j = i / bit_length + 2;
                 let k = i % bit_length;
@@ -315,7 +315,7 @@ impl RangeProof {
         let fs_challenge = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
-        let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
+        let fs_challenge_square = fs_challenge * &fs_challenge;
 
         // eq 65:
         let Gtx = G * &self.tx;
@@ -439,7 +439,7 @@ impl RangeProof {
         let fs_challenge = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
-        let fs_challenge_square = fs_challenge.mul(&fs_challenge.get_element());
+        let fs_challenge_square = fs_challenge * &fs_challenge;
 
         // eq 65:
         let Gtx = G * &self.tx;
@@ -546,7 +546,7 @@ impl RangeProof {
         let challenge_x = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
-        let challenge_x_sq = challenge_x.mul(&challenge_x.get_element());
+        let challenge_x_sq = challenge_x * &challenge_x;
 
         let x_u = Sha256::new()
             .chain_bigint(&self.tau_x.to_bigint())

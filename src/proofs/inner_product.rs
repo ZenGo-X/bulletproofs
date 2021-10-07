@@ -226,7 +226,7 @@ impl InnerProductArg {
 
         let a_fe = Scalar::<Secp256k1>::from(&self.a_tag);
         let b_fe = Scalar::<Secp256k1>::from(&self.b_tag);
-        let c = a_fe.mul(&b_fe.get_element());
+        let c = a_fe * &b_fe;
         let Ga = &G[0] * &a_fe;
         let Hb = &H[0] * &b_fe;
         let ux_c = ux * &c;
