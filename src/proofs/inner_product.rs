@@ -74,16 +74,16 @@ impl InnerProductArg {
                 if x.1 != &BigInt::zero() {
                     let aLi = Scalar::<Secp256k1>::from(x.1);
                     let aLi_GRi: Point<Secp256k1> = x.0 * &aLi;
-                    acc.add_point(&aLi_GRi.get_element())
+                    acc + &aLi_GRi
                 } else {
                     acc
                 }
             });
             let L = H_L.iter().zip(b_R.clone()).fold(aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi = Scalar::<Secp256k1>::from(&x.1);
+                    let bRi = Scalar::<Secp256k1>::from(x.1);
                     let bRi_HLi: Point<Secp256k1> = x.0 * &bRi;
-                    acc.add_point(&bRi_HLi.get_element())
+                    acc + &bRi_HLi
                 } else {
                     acc
                 }
@@ -97,18 +97,18 @@ impl InnerProductArg {
             let ux_CR: Point<Secp256k1> = ux * &c_R_fe;
             let aR_GL = G_L.iter().zip(a_R.clone()).fold(ux_CR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let aRi = Scalar::<Secp256k1>::from(&x.1);
+                    let aRi = Scalar::<Secp256k1>::from(x.1);
                     let aRi_GLi: Point<Secp256k1> = x.0 * &aRi;
-                    acc.add_point(&aRi_GLi.get_element())
+                    acc + &aRi_GLi
                 } else {
                     acc
                 }
             });
             let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi = Scalar::<Secp256k1>::from(&x.1);
+                    let bLi = Scalar::<Secp256k1>::from(x.1);
                     let bLi_HRi: Point<Secp256k1> = x.0 * &bLi;
-                    acc.add_point(&bLi_HRi.get_element())
+                    acc + &bLi_HRi
                 } else {
                     acc
                 }
