@@ -395,7 +395,7 @@ impl RangeProof {
             .result_scalar();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
         let order = Scalar::<Secp256k1>::group_order();
         let z_minus = BigInt::mod_sub(&order, &z.to_bigint(), &order);
@@ -539,11 +539,11 @@ impl RangeProof {
         let y_inv_bn = BigInt::mod_inv(&y_bn, &order).unwrap();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
         let z_squared = BigInt::mod_pow(&z_bn, &BigInt::from(2), &order);
 
-        let challenge_x = Sha256::new()
+        let challenge_x: Scalar<Secp256k1> = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
             .result_scalar();
         let challenge_x_sq = challenge_x * &challenge_x;
@@ -559,7 +559,7 @@ impl RangeProof {
         let ux = G * &x_u_fe;
 
         // generate a random scalar to combine 2 verification equations
-        let challenge_ver = Sha256::new()
+        let challenge_ver: Scalar<Secp256k1> = Sha256::new()
             .chain_points([&self.A, &self.S, &self.T1, &self.T2, G, H])
             .result_scalar();
         let challenge_ver_bn = challenge_ver.to_bigint();
@@ -624,7 +624,7 @@ impl RangeProof {
             .iter()
             .zip(self.inner_product_proof.R.iter())
         {
-            let x = Sha256::new().chain_points([&Li, &Ri, &ux]).result_scalar();
+            let x: Scalar<Secp256k1> = Sha256::new().chain_points([&Li, &Ri, &ux]).result_scalar();
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();

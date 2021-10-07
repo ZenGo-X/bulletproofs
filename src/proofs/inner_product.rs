@@ -20,7 +20,7 @@ use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
 use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
 use curv::BigInt;
-use sha2::{Sha256, Sha512};
+use sha2::Sha256;
 
 use Errors::{self, InnerProductError};
 
