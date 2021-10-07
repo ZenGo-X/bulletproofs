@@ -240,7 +240,7 @@ impl WeightedInnerProdArg {
 
             // compute challenge e
             // let lg_n = L_vec.len();
-            let e = Sha256::new().chain_points([&A, &B, &g, &h]).result_scalar();
+            let e: Scalar<Secp256k1> = Sha256::new().chain_points([&A, &B, &g, &h]).result_scalar();
             let e_bn = e.to_bigint();
             let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
 

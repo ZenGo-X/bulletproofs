@@ -268,7 +268,7 @@ impl InnerProductArg {
         let mut minus_x_inv_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut allinv = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = Sha256::new().chain_points([Li, Ri, ux]).result_scalar();
+            let x: Scalar<Secp256k1> = Sha256::new().chain_points([Li, Ri, ux]).result_scalar();
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();

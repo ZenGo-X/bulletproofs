@@ -143,14 +143,14 @@ impl RangeProofWIP {
         let mut A = H * &alpha;
         A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if x.1 {
-                acc + &x.0
+                acc + x.0
             } else {
                 acc
             }
         });
         A = h_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if !x.1 {
-                acc - &x.0
+                acc - x.0
             } else {
                 acc
             }
@@ -160,7 +160,7 @@ impl RangeProofWIP {
         let y_bn = y.to_bigint();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&A, &yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 
@@ -283,7 +283,7 @@ impl RangeProofWIP {
         let y_bn = y.to_bigint();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
         let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
 

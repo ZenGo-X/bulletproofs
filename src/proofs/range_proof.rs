@@ -91,7 +91,7 @@ impl RangeProof {
         let mut index: usize = 0;
         A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if x.1 {
-                acc + &x.0
+                acc + x.0
             } else {
                 acc
             }
@@ -99,7 +99,7 @@ impl RangeProof {
 
         A = h_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
             if !x.1 {
-                acc - &x.0
+                acc - x.0
             } else {
                 acc
             }
@@ -308,7 +308,7 @@ impl RangeProof {
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
         let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
 
-        let yi_inv = (0..nm).map(|i| yi[i].invert()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let yi_inv = (0..nm).map(|i| yi[i].invert().unwrap()).collect::<Vec<Scalar::<Secp256k1>>>();
 
         let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
 
@@ -432,7 +432,7 @@ impl RangeProof {
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
         let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
 
-        let yi_inv = (0..nm).map(|i| yi[i].invert()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let yi_inv = (0..nm).map(|i| yi[i].invert().unwrap()).collect::<Vec<Scalar::<Secp256k1>>>();
 
         let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
 
@@ -626,7 +626,7 @@ impl RangeProof {
         {
             let x = Sha256::new().chain_points([&Li, &Ri, &ux]).result_scalar();
             let x_bn = x.to_bigint();
-            let x_inv_fe = x.invert();
+            let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
             let x_inv_sq_bn =
