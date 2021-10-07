@@ -271,7 +271,7 @@ impl RangeProof {
             .result_scalar();
         let base_point = Point::<Secp256k1>::generator();
         let yG: Point<Secp256k1> = base_point * &y;
-        let z = Sha256::new().chain_points([&yG]).result_scalar();
+        let z: Scalar<Secp256k1> = Sha256::new().chain_points([&yG]).result_scalar();
         let z_bn = z.to_bigint();
         let order = Scalar::<Secp256k1>::group_order();
         let z_minus = BigInt::mod_sub(&order, &z.to_bigint(), &order);

@@ -55,7 +55,7 @@ impl StatementRP {
         let nm = n * m;
 
         // G,H - points for pederson commitment: com  = vG + rH
-        let G = Point::<Secp256k1>::generator();
+        let G = Point::<Secp256k1>::generator().to_point();
         let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &Scalar::<Secp256k1>::group_order());
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
