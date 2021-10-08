@@ -781,7 +781,7 @@ mod tests {
 
     pub fn test_helper(seed: &BigInt, n: usize, m: usize) {
         let nm = n * m;
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G =  Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -812,7 +812,7 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = &*G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
             })
             .collect::<Vec<Point<Secp256k1>>>();
@@ -824,7 +824,7 @@ mod tests {
 
     pub fn test_helper_aggregated(seed: &BigInt, n: usize, m: usize) {
         let nm = n * m;
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -855,7 +855,7 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = &*G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
             })
             .collect::<Vec<Point<Secp256k1>>>();
@@ -875,7 +875,7 @@ mod tests {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from_bytes(KZen);
 
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -906,7 +906,7 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = &*G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
             })
             .collect::<Vec<Point<Secp256k1>>>();
@@ -926,7 +926,7 @@ mod tests {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from_bytes(KZen);
 
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -960,7 +960,7 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = &*G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
             })
             .collect::<Vec<Point<Secp256k1>>>();
@@ -979,7 +979,7 @@ mod tests {
         let KZen: &[u8] = &[75, 90, 101, 110];
         let kzen_label = BigInt::from_bytes(KZen);
 
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -1010,7 +1010,7 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = &*G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
             })
             .collect::<Vec<Point<Secp256k1>>>();
@@ -1032,7 +1032,7 @@ mod tests {
         let kzen_label = BigInt::from_bytes(KZen);
 
         // G,H - points for pederson commitment: com  = vG + rH
-        let G: Point<Secp256k1> = ECPoint::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -1063,7 +1063,7 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
+                let ped_com = &*G * &v_vec[i] + &H * &r_vec[i];
                 ped_com
             })
             .collect::<Vec<Point<Secp256k1>>>();

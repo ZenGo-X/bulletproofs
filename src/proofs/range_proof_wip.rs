@@ -603,7 +603,6 @@ impl RangeProofWIP {
 #[cfg(test)]
 mod tests {
     use curv::arithmetic::traits::*;
-    use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
     use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
     use curv::BigInt;
 
