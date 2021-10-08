@@ -18,7 +18,7 @@ version 3 of the License, or (at your option) any later version.
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
 use curv::BigInt;
 use sha2::Sha256;
 
@@ -168,7 +168,13 @@ impl InnerProductArg {
         }
     }
 
-    pub fn verify(&self, g_vec: &[Point<Secp256k1>], hi_tag: &[Point<Secp256k1>], ux: &Point<Secp256k1>, P: &Point<Secp256k1>) -> Result<(), Errors> {
+    pub fn verify(
+        &self,
+        g_vec: &[Point<Secp256k1>],
+        hi_tag: &[Point<Secp256k1>],
+        ux: &Point<Secp256k1>,
+        P: &Point<Secp256k1>,
+    ) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
@@ -190,8 +196,7 @@ impl InnerProductArg {
             let order = Scalar::<Secp256k1>::group_order();
             let x_inv_fe = x.invert().unwrap();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
             let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
             let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
@@ -245,7 +250,13 @@ impl InnerProductArg {
     /// Uses a single multiexponentiation (multiscalar multiplication in additive notation)
     /// check to verify an inner product proof.
     ///
-    pub fn fast_verify(&self, g_vec: &[Point<Secp256k1>], hi_tag: &[Point<Secp256k1>], ux: &Point<Secp256k1>, P: &Point<Secp256k1>) -> Result<(), Errors> {
+    pub fn fast_verify(
+        &self,
+        g_vec: &[Point<Secp256k1>],
+        hi_tag: &[Point<Secp256k1>],
+        ux: &Point<Secp256k1>,
+        P: &Point<Secp256k1>,
+    ) -> Result<(), Errors> {
         let G = &g_vec[..];
         let H = &hi_tag[..];
         let n = G.len();
@@ -273,8 +284,7 @@ impl InnerProductArg {
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
 
             x_sq_vec.push(x_sq_bn.clone());
             x_inv_sq_vec.push(x_inv_sq_bn.clone());
@@ -354,11 +364,11 @@ fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
 mod tests {
     use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-    use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+    use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
     use curv::BigInt;
-    use sha2::Sha512;
     use proofs::inner_product::InnerProductArg;
     use proofs::range_proof::generate_random_point;
+    use sha2::Sha512;
 
     fn test_helper(n: usize) {
         let KZen: &[u8] = &[75, 90, 101, 110];
@@ -411,9 +421,11 @@ mod tests {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe = Scalar::<Secp256k1>::from(&c);
@@ -489,9 +501,11 @@ mod tests {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe = Scalar::<Secp256k1>::from(&c);
@@ -554,9 +568,11 @@ mod tests {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * ux
         let c_fe = Scalar::<Secp256k1>::from(&c);

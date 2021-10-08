@@ -25,7 +25,7 @@ version 3 of the License, or (at your option) any later version.
 
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
 use curv::BigInt;
 use sha2::{Sha256, Sha512};
 
@@ -56,7 +56,11 @@ impl StatementRP {
 
         // G,H - points for pederson commitment: com  = vG + rH
         let G = Point::<Secp256k1>::generator().to_point();
-        let label = BigInt::mod_sub(&init_seed, &BigInt::one(), &Scalar::<Secp256k1>::group_order());
+        let label = BigInt::mod_sub(
+            &init_seed,
+            &BigInt::one(),
+            &Scalar::<Secp256k1>::group_order(),
+        );
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
 
@@ -94,7 +98,11 @@ pub struct RangeProofWIP {
 }
 
 impl RangeProofWIP {
-    pub fn prove(stmt: StatementRP, mut secret: Vec<Scalar::<Secp256k1>>, blinding: &[Scalar::<Secp256k1>]) -> RangeProofWIP {
+    pub fn prove(
+        stmt: StatementRP,
+        mut secret: Vec<Scalar<Secp256k1>>,
+        blinding: &[Scalar<Secp256k1>],
+    ) -> RangeProofWIP {
         let num_of_proofs = secret.len();
         let bit_length = stmt.bit_length;
         //num of proofs times bit length
@@ -116,9 +124,9 @@ impl RangeProofWIP {
 
         //concat all secrets:
         secret.reverse();
-        let secret_agg = secret.iter().fold(BigInt::zero(), |acc, x| {
-            acc.shl(bit_length) + x.to_bigint()
-        });
+        let secret_agg = secret
+            .iter()
+            .fold(BigInt::zero(), |acc, x| acc.shl(bit_length) + x.to_bigint());
 
         let aL = (0..nm)
             .map(|i| {
@@ -141,20 +149,26 @@ impl RangeProofWIP {
         // let mut index: usize = 0;
         let alpha = Scalar::<Secp256k1>::random();
         let mut A = &H * &alpha;
-        A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
-            if x.1 {
-                acc + x.0
-            } else {
-                acc
-            }
-        });
-        A = h_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
-            if !x.1 {
-                acc - x.0
-            } else {
-                acc
-            }
-        });
+        A = g_vec.iter().zip(secret_bits.clone()).fold(
+            A,
+            |acc, x| {
+                if x.1 {
+                    acc + x.0
+                } else {
+                    acc
+                }
+            },
+        );
+        A = h_vec.iter().zip(secret_bits.clone()).fold(
+            A,
+            |acc, x| {
+                if !x.1 {
+                    acc - x.0
+                } else {
+                    acc
+                }
+            },
+        );
 
         let y = Sha256::new().chain_points([&A]).result_scalar();
         let y_bn = y.to_bigint();
@@ -377,7 +391,11 @@ impl RangeProofWIP {
     /// Verify a wip-based range proof in a using a single multi-exponentiation equation.
     /// The final check costs a multi-exponentiation of size (2mn + 2log(mn) + m + 5).
     ///
-    pub fn aggregated_verify(&self, stmt: StatementRP, ped_com: &[Point<Secp256k1>]) -> Result<(), Errors> {
+    pub fn aggregated_verify(
+        &self,
+        stmt: StatementRP,
+        ped_com: &[Point<Secp256k1>],
+    ) -> Result<(), Errors> {
         let wip = &self.weighted_inner_product_proof;
         let P = &self.A;
 
@@ -462,15 +480,12 @@ impl RangeProofWIP {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in wip.L.iter().zip(wip.R.iter()) {
-            let x: Scalar<Secp256k1> = Sha256::new()
-                .chain_points([Li, Ri, g, h])
-                .result_scalar();
+            let x: Scalar<Secp256k1> = Sha256::new().chain_points([Li, Ri, g, h]).result_scalar();
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
             let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, &order);
             let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, &order);
 
@@ -603,7 +618,7 @@ impl RangeProofWIP {
 #[cfg(test)]
 mod tests {
     use curv::arithmetic::traits::*;
-    use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+    use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
     use curv::BigInt;
 
     use proofs::range_proof_wip::{RangeProofWIP, StatementRP};
@@ -618,9 +633,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -645,9 +662,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -678,9 +697,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -711,12 +732,14 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(Scalar::<Secp256k1>::from(&bad_v));
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {

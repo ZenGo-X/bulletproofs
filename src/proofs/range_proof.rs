@@ -19,15 +19,15 @@ version 3 of the License, or (at your option) any later version.
 
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1, ECPoint, Curve};
+use curv::elliptic::curves::{secp256_k1::Secp256k1, Curve, ECPoint, Point, Scalar};
 use curv::BigInt;
 use sha2::Sha256;
 
+use generic_array::{typenum::Unsigned, GenericArray};
 use itertools::iterate;
 use proofs::inner_product::InnerProductArg;
 use std::ops::{Shl, Shr};
 use Errors::{self, RangeProofError};
-use generic_array::{GenericArray, typenum::Unsigned};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RangeProof {
@@ -47,8 +47,8 @@ impl RangeProof {
         h_vec: &[Point<Secp256k1>],
         G: &Point<Secp256k1>,
         H: &Point<Secp256k1>,
-        mut secret: Vec<Scalar::<Secp256k1>>,
-        blinding: &[Scalar::<Secp256k1>],
+        mut secret: Vec<Scalar<Secp256k1>>,
+        blinding: &[Scalar<Secp256k1>],
         bit_length: usize,
     ) -> RangeProof {
         let num_of_proofs = secret.len();
@@ -68,9 +68,9 @@ impl RangeProof {
 
         //concat all secrets:
         secret.reverse();
-        let secret_agg = secret.iter().fold(BigInt::zero(), |acc, x| {
-            acc.shl(bit_length) + x.to_bigint()
-        });
+        let secret_agg = secret
+            .iter()
+            .fold(BigInt::zero(), |acc, x| acc.shl(bit_length) + x.to_bigint());
 
         let aL = (0..nm)
             .map(|i| {
@@ -90,24 +90,34 @@ impl RangeProof {
             })
             .collect::<Vec<bool>>();
         let mut index: usize = 0;
-        A = g_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
-            if x.1 {
-                acc + x.0
-            } else {
-                acc
-            }
-        });
+        A = g_vec.iter().zip(secret_bits.clone()).fold(
+            A,
+            |acc, x| {
+                if x.1 {
+                    acc + x.0
+                } else {
+                    acc
+                }
+            },
+        );
 
-        A = h_vec.iter().zip(secret_bits.clone()).fold(A, |acc, x| {
-            if !x.1 {
-                acc - x.0
-            } else {
-                acc
-            }
-        });
+        A = h_vec.iter().zip(secret_bits.clone()).fold(
+            A,
+            |acc, x| {
+                if !x.1 {
+                    acc - x.0
+                } else {
+                    acc
+                }
+            },
+        );
 
-        let SR = (0..nm).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
-        let SL = (0..nm).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let SR = (0..nm)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
+        let SL = (0..nm)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         S = SL.iter().zip(&SR).fold(S, |acc, x| {
             let g_vec_i_SLi = &g_vec[index] * x.0;
@@ -126,7 +136,7 @@ impl RangeProof {
         let one_fe = Scalar::<Secp256k1>::from(&one);
         let yi = iterate(one_fe.clone(), |i| i.clone() * &y)
             .take(nm)
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let t2 = (0..nm)
             .map(|i| SR[i].clone() * &yi[i] * &SL[i])
@@ -136,7 +146,7 @@ impl RangeProof {
         let two_fe = Scalar::<Secp256k1>::from(&two);
         let vec_2n = iterate(one_fe.clone(), |i| i.clone() * &two_fe)
             .take(bit_length)
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let t1 = (0..nm)
             .map(|i| {
@@ -222,9 +232,11 @@ impl RangeProof {
                 //     yi_fe.invert()
                 yi[i].invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..nm)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // P' = P' g^l
         let P = g_vec.iter().zip(&Lp).fold(P, |acc, x| {
@@ -284,18 +296,22 @@ impl RangeProof {
         let one_fe = Scalar::<Secp256k1>::from(&one_bn);
         let yi = iterate(one_fe.clone(), |i| i.clone() * &y)
             .take(nm)
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let scalar_mul_yn = yi.iter().fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
+        let scalar_mul_yn = yi
+            .iter()
+            .fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
         let scalar_mul_yn = scalar_mul_yn.to_bigint();
         let two = BigInt::from(2);
 
         let two_fe = Scalar::<Secp256k1>::from(&two);
         let vec_2n = iterate(one_fe.clone(), |i| i.clone() * &two_fe)
             .take(bit_length)
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let scalar_mul_2n = vec_2n.iter().fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
+        let scalar_mul_2n = vec_2n
+            .iter()
+            .fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
         let scalar_mul_2n = scalar_mul_2n.to_bigint();
 
         let z_cubed_scalar_mul_2n = (0..num_of_proofs)
@@ -310,9 +326,13 @@ impl RangeProof {
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
         let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
 
-        let yi_inv = (0..nm).map(|i| yi[i].invert().unwrap()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let yi_inv = (0..nm)
+            .map(|i| yi[i].invert().unwrap())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..nm)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         let fs_challenge = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
@@ -348,7 +368,11 @@ impl RangeProof {
         // P' = u^{xc}
 
         let P = &Gx * &self.tx;
-        let minus_miu = BigInt::mod_sub(&Scalar::<Secp256k1>::group_order(), &self.miu.to_bigint(), &Scalar::<Secp256k1>::group_order());
+        let minus_miu = BigInt::mod_sub(
+            &Scalar::<Secp256k1>::group_order(),
+            &self.miu.to_bigint(),
+            &Scalar::<Secp256k1>::group_order(),
+        );
         let minus_miu_fe = Scalar::<Secp256k1>::from(&minus_miu);
         let Hmiu = H * &minus_miu_fe;
         let Sx = &self.S * &fs_challenge;
@@ -407,18 +431,22 @@ impl RangeProof {
         let one_fe = Scalar::<Secp256k1>::from(&one_bn);
         let yi = iterate(one_fe.clone(), |i| i.clone() * &y)
             .take(nm)
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let scalar_mul_yn = yi.iter().fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
+        let scalar_mul_yn = yi
+            .iter()
+            .fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
         let scalar_mul_yn = scalar_mul_yn.to_bigint();
         let two = BigInt::from(2);
 
         let two_fe = Scalar::<Secp256k1>::from(&two);
         let vec_2n = iterate(one_fe.clone(), |i| i.clone() * &two_fe)
             .take(bit_length)
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let scalar_mul_2n = vec_2n.iter().fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
+        let scalar_mul_2n = vec_2n
+            .iter()
+            .fold(Scalar::<Secp256k1>::zero(), |acc, x| acc + x);
         let scalar_mul_2n = scalar_mul_2n.to_bigint();
 
         let z_cubed_scalar_mul_2n = (0..num_of_proofs)
@@ -433,9 +461,13 @@ impl RangeProof {
         let z_minus_zsq_scalar_mul_yn = BigInt::mod_mul(&z_minus_zsq, &scalar_mul_yn, &order);
         let delta = BigInt::mod_sub(&z_minus_zsq_scalar_mul_yn, &z_cubed_scalar_mul_2n, &order);
 
-        let yi_inv = (0..nm).map(|i| yi[i].invert().unwrap()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let yi_inv = (0..nm)
+            .map(|i| yi[i].invert().unwrap())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..nm).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..nm)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         let fs_challenge = Sha256::new()
             .chain_points([&self.T1, &self.T2, G, H])
@@ -471,7 +503,11 @@ impl RangeProof {
         // P' = u^{xc}
 
         let P = &Gx * &self.tx;
-        let minus_miu = BigInt::mod_sub(&Scalar::<Secp256k1>::group_order(), &self.miu.to_bigint(), &Scalar::<Secp256k1>::group_order());
+        let minus_miu = BigInt::mod_sub(
+            &Scalar::<Secp256k1>::group_order(),
+            &self.miu.to_bigint(),
+            &Scalar::<Secp256k1>::group_order(),
+        );
         let minus_miu_fe = Scalar::<Secp256k1>::from(&minus_miu);
         let Hmiu = H * &minus_miu_fe;
         let Sx = &self.S * &fs_challenge;
@@ -628,8 +664,7 @@ impl RangeProof {
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
 
             x_sq_vec.push(x_sq_bn.clone());
             x_inv_sq_vec.push(x_inv_sq_bn.clone());
@@ -754,17 +789,21 @@ impl RangeProof {
 }
 
 pub fn generate_random_point(bytes: &[u8]) -> Point<Secp256k1> {
-    let compressed_point_len = <<Secp256k1 as Curve>::Point as ECPoint>::CompressedPointLength::USIZE;
-    let truncated = if bytes.len() > compressed_point_len-1 {
-        &bytes[0..compressed_point_len-1]
+    let compressed_point_len =
+        <<Secp256k1 as Curve>::Point as ECPoint>::CompressedPointLength::USIZE;
+    let truncated = if bytes.len() > compressed_point_len - 1 {
+        &bytes[0..compressed_point_len - 1]
     } else {
         &bytes
     };
-    let mut buffer = GenericArray::<u8, <<Secp256k1 as Curve>::Point as ECPoint>::CompressedPointLength>::default();
+    let mut buffer = GenericArray::<
+        u8,
+        <<Secp256k1 as Curve>::Point as ECPoint>::CompressedPointLength,
+    >::default();
     buffer.as_mut_slice()[0] = 0x2;
-    buffer.as_mut_slice()[1..1+truncated.len()].copy_from_slice(truncated);
+    buffer.as_mut_slice()[1..1 + truncated.len()].copy_from_slice(truncated);
     if let Ok(point) = Point::from_bytes(buffer.as_slice()) {
-        return point
+        return point;
     }
 
     let bn = BigInt::from_bytes(bytes);
@@ -778,7 +817,7 @@ pub fn generate_random_point(bytes: &[u8]) -> Point<Secp256k1> {
 mod tests {
     use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-    use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+    use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
     use curv::BigInt;
     use sha2::Sha512;
 
@@ -787,7 +826,7 @@ mod tests {
 
     pub fn test_helper(seed: &BigInt, n: usize, m: usize) {
         let nm = n * m;
-        let G =  Point::<Secp256k1>::generator();
+        let G = Point::<Secp256k1>::generator();
         let label = BigInt::from(1);
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -812,9 +851,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -855,9 +896,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -906,9 +949,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -957,12 +1002,14 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let bad_v = BigInt::from(2).pow(33);
         v_vec.push(Scalar::<Secp256k1>::from(&bad_v));
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -1010,9 +1057,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {
@@ -1063,9 +1112,11 @@ mod tests {
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let r_vec = (0..m).map(|_| Scalar::<Secp256k1>::random()).collect::<Vec<Scalar::<Secp256k1>>>();
+        let r_vec = (0..m)
+            .map(|_| Scalar::<Secp256k1>::random())
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
             .map(|i| {

@@ -24,7 +24,7 @@ version 3 of the License, or (at your option) any later version.
 
 use curv::arithmetic::traits::*;
 use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
 use curv::BigInt;
 use sha2::Sha256;
 
@@ -303,8 +303,7 @@ impl WeightedInnerProdArg {
             let order = Scalar::<Secp256k1>::group_order();
             let x_inv_fe = x.invert().unwrap();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
             let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
             let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
@@ -427,15 +426,12 @@ impl WeightedInnerProdArg {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x: Scalar<Secp256k1> = Sha256::new()
-                .chain_points([Li, Ri, g, h])
-                .result_scalar();
+            let x: Scalar<Secp256k1> = Sha256::new().chain_points([Li, Ri, g, h]).result_scalar();
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
             let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
             let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, &order);
             let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, &order);
 
@@ -544,7 +540,7 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
 mod tests {
     use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
-    use curv::elliptic::curves::{Point, Scalar, secp256_k1::Secp256k1};
+    use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
     use curv::BigInt;
     use sha2::{Sha256, Sha512};
 
@@ -595,8 +591,10 @@ mod tests {
             })
             .collect();
 
-        let y_scalar: BigInt = Sha256::new().chain(b"Seed string decided by P,V!").result_bigint();
-            //HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        let y_scalar: BigInt = Sha256::new()
+            .chain(b"Seed string decided by P,V!")
+            .result_bigint();
+        //HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
         let alpha_fe = Scalar::<Secp256k1>::random();
@@ -613,9 +611,11 @@ mod tests {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
         let c_fe = Scalar::<Secp256k1>::from(&c);
@@ -627,7 +627,9 @@ mod tests {
                 let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
-            .fold(gc_halpha, |acc, x: Point<Secp256k1>| acc + x as Point<Secp256k1>);
+            .fold(gc_halpha, |acc, x: Point<Secp256k1>| {
+                acc + x as Point<Secp256k1>
+            });
         let P = (0..n)
             .map(|i| {
                 let bi = Scalar::<Secp256k1>::from(&b[i]);
@@ -686,7 +688,9 @@ mod tests {
             })
             .collect();
 
-        let y_scalar: BigInt = Sha256::new().chain(b"Seed string decided by P,V!").result_bigint();
+        let y_scalar: BigInt = Sha256::new()
+            .chain(b"Seed string decided by P,V!")
+            .result_bigint();
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
         let alpha_fe = Scalar::<Secp256k1>::random();
@@ -703,9 +707,11 @@ mod tests {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
         let c_fe = Scalar::<Secp256k1>::from(&c);
@@ -717,7 +723,9 @@ mod tests {
                 let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
-            .fold(gc_halpha, |acc, x: Point<Secp256k1>| acc + x as Point<Secp256k1>);
+            .fold(gc_halpha, |acc, x: Point<Secp256k1>| {
+                acc + x as Point<Secp256k1>
+            });
         let P = (0..n)
             .map(|i| {
                 let bi = Scalar::<Secp256k1>::from(&b[i]);
@@ -763,7 +771,9 @@ mod tests {
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let h = generate_random_point(&Converter::to_bytes(&hash));
 
-        let y_scalar: BigInt = Sha256::new().chain(b"Seed string decided by P,V!").result_bigint();
+        let y_scalar: BigInt = Sha256::new()
+            .chain(b"Seed string decided by P,V!")
+            .result_bigint();
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
         let alpha_fe = Scalar::<Secp256k1>::random();
@@ -780,9 +790,11 @@ mod tests {
                 let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
                 yi_fe.invert().unwrap()
             })
-            .collect::<Vec<Scalar::<Secp256k1>>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<Point<Secp256k1>>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
         let c_fe = Scalar::<Secp256k1>::from(&c);
@@ -794,7 +806,9 @@ mod tests {
                 let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
-            .fold(gc_halpha, |acc, x: Point<Secp256k1>| acc + x as Point<Secp256k1>);
+            .fold(gc_halpha, |acc, x: Point<Secp256k1>| {
+                acc + x as Point<Secp256k1>
+            });
         let P = (0..m)
             .map(|i| {
                 let bi = Scalar::<Secp256k1>::from(&b[i]);

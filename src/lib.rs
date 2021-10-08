@@ -19,9 +19,9 @@ extern crate serde_derive;
 extern crate serde;
 
 extern crate curv;
+extern crate generic_array;
 extern crate itertools;
 extern crate sha2;
-extern crate generic_array;
 
 pub mod proofs;
 
