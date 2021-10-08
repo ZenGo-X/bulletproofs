@@ -343,8 +343,7 @@ impl RangeProof {
             .chain_bigint(&self.tau_x.to_bigint())
             .chain_bigint(&self.miu.to_bigint())
             .chain_bigint(&self.tx.to_bigint())
-            .result_bigint();
-        let challenge_x = Scalar::<Secp256k1>::from(&challenge_x);
+            .result_scalar();
         let Gx = G * &challenge_x;
         // P' = u^{xc}
 
@@ -467,8 +466,7 @@ impl RangeProof {
             .chain_bigint(&self.tau_x.to_bigint())
             .chain_bigint(&self.miu.to_bigint())
             .chain_bigint(&self.tx.to_bigint())
-            .result_bigint();
-        let challenge_x = Scalar::<Secp256k1>::from(&challenge_x);
+            .result_scalar();
         let Gx = G * &challenge_x;
         // P' = u^{xc}
 
@@ -550,14 +548,13 @@ impl RangeProof {
             .result_scalar();
         let challenge_x_sq = &challenge_x * &challenge_x;
 
-        let x_u = Sha256::new()
+        let x_u_fe = Sha256::new()
             .chain_bigint(&self.tau_x.to_bigint())
             .chain_bigint(&self.miu.to_bigint())
             .chain_bigint(&self.tx.to_bigint())
-            .result_bigint();
+            .result_scalar();
 
         // ux = g^{x_u}
-        let x_u_fe = Scalar::<Secp256k1>::from(&x_u);
         let ux = G * &x_u_fe;
 
         // generate a random scalar to combine 2 verification equations
@@ -685,7 +682,7 @@ impl RangeProof {
             &order,
         );
         let ab_minus_tx = BigInt::mod_sub(&ab, &self.tx.to_bigint(), &order);
-        let scalar_G1 = BigInt::mod_mul(&x_u, &ab_minus_tx, &order);
+        let scalar_G1 = BigInt::mod_mul(&x_u_fe.to_bigint(), &ab_minus_tx, &order);
 
         let delta_minus_tx = BigInt::mod_sub(&delta, &self.tx.to_bigint(), &order);
         let scalar_G2 = BigInt::mod_mul(&challenge_ver_bn, &delta_minus_tx, &order);
