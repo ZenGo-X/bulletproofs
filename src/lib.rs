@@ -21,6 +21,7 @@ extern crate serde;
 extern crate curv;
 extern crate itertools;
 extern crate sha2;
+extern crate generic_array;
 
 pub mod proofs;
 

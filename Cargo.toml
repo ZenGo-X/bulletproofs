@@ -15,6 +15,7 @@ serde = "1.0"
 serde_derive = "1.0"
 curv-kzen = { version = "0.8", default-features = false }
 sha2 = "0.9"
+generic-array = "0.14"
 
 [dev-dependencies]
 criterion = "0.2"
