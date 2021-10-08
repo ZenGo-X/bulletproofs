@@ -613,8 +613,8 @@ mod tests {
         let stmt = StatementRP::generate_bases(&seed, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
@@ -640,8 +640,8 @@ mod tests {
         let stmt = StatementRP::generate_bases(&seed, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
@@ -673,8 +673,8 @@ mod tests {
         let stmt = StatementRP::generate_bases(&kzen_label, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let v_vec = (0..m)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
@@ -706,8 +706,8 @@ mod tests {
         let stmt = StatementRP::generate_bases(&kzen_label, m, n);
 
         // generate witness
-        let G = stmt.G;
-        let H = stmt.H;
+        let G = stmt.G.clone();
+        let H = stmt.H.clone();
         let range = BigInt::from(2).pow(n as u32);
         let mut v_vec = (0..m - 1)
             .map(|_| Scalar::<Secp256k1>::from(&BigInt::sample_below(&range)))
