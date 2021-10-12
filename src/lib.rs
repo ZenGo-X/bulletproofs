@@ -13,6 +13,8 @@ version 3 of the License, or (at your option) any later version.
 @license GPL-3.0+ <https://github.com/KZen-networks/bulletproof/blob/master/LICENSE>
 */
 
+#![allow(clippy::many_single_char_names, clippy::too_many_arguments)]
+
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 #[macro_use]
 extern crate serde_derive;

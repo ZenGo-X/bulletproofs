@@ -57,9 +57,9 @@ impl StatementRP {
         // G,H - points for pederson commitment: com  = vG + rH
         let G = Point::<Secp256k1>::generator().to_point();
         let label = BigInt::mod_sub(
-            &init_seed,
+            init_seed,
             &BigInt::one(),
-            &Scalar::<Secp256k1>::group_order(),
+            Scalar::<Secp256k1>::group_order(),
         );
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let H = generate_random_point(&Converter::to_bytes(&hash));
@@ -81,13 +81,13 @@ impl StatementRP {
             })
             .collect::<Vec<Point<Secp256k1>>>();
 
-        return StatementRP {
+        StatementRP {
             g_vec,
             h_vec,
             G,
             H,
             bit_length,
-        };
+        }
     }
 }
 
@@ -135,7 +135,7 @@ impl RangeProofWIP {
             })
             .collect::<Vec<BigInt>>();
         let aR = (0..nm)
-            .map(|i| BigInt::mod_sub(&aL[i], &one, &order))
+            .map(|i| BigInt::mod_sub(&aL[i], &one, order))
             .collect::<Vec<BigInt>>();
 
         let secret_bits = (0..nm)
@@ -159,7 +159,7 @@ impl RangeProofWIP {
                 }
             },
         );
-        A = h_vec.iter().zip(secret_bits.clone()).fold(
+        A = h_vec.iter().zip(secret_bits).fold(
             A,
             |acc, x| {
                 if !x.1 {
@@ -176,17 +176,17 @@ impl RangeProofWIP {
         let yG: Point<Secp256k1> = base_point * &y;
         let z: Scalar<Secp256k1> = Sha256::new().chain_points([&A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
-        let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
+        let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, order);
 
         // y_vec = (y, y^2, ..., y^{nm})
-        let y_powers = iterate(y_bn.clone(), |i| BigInt::mod_mul(&i, &y_bn, &order))
+        let y_powers = iterate(y_bn.clone(), |i| BigInt::mod_mul(i, &y_bn, order))
             .take(nm)
             .collect::<Vec<BigInt>>();
         let mut y_powers_rev = y_powers.clone();
         y_powers_rev.reverse();
 
         // vec_2n = (1, 2, 4, ..., 2^{n-1})
-        let vec_2n = iterate(one.clone(), |i| i.clone() * &two)
+        let vec_2n = iterate(one, |i| i.clone() * &two)
             .take(bit_length)
             .collect::<Vec<BigInt>>();
 
@@ -202,50 +202,50 @@ impl RangeProofWIP {
                 let two_i = vec_2n[k].clone();
                 let j = i / bit_length;
                 let z_2j = vec_z2m[j].clone();
-                BigInt::mod_mul(&two_i, &z_2j, &order)
+                BigInt::mod_mul(&two_i, &z_2j, order)
             })
             .collect::<Vec<BigInt>>();
 
         // compute exponent of h
-        let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), &order);
+        let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), order);
         let ip_blinding = (0..num_of_proofs)
-            .map(|i| BigInt::mod_mul(&blinding[i].to_bigint(), &vec_z2m[i].clone(), &order))
-            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-        let scalar_H = BigInt::mod_mul(&ip_blinding, &y_pow, &order);
+            .map(|i| BigInt::mod_mul(&blinding[i].to_bigint(), &vec_z2m[i].clone(), order))
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, order));
+        let scalar_H = BigInt::mod_mul(&ip_blinding, &y_pow, order);
 
         // compute exponent of g
         let ip_secrets = (0..num_of_proofs)
-            .map(|i| BigInt::mod_mul(&secret[i].to_bigint(), &vec_z2m[i].clone(), &order))
-            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-        let scalar1_G = BigInt::mod_mul(&ip_secrets, &y_pow, &order);
+            .map(|i| BigInt::mod_mul(&secret[i].to_bigint(), &vec_z2m[i].clone(), order))
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, order));
+        let scalar1_G = BigInt::mod_mul(&ip_secrets, &y_pow, order);
 
         let scalar_G = (0..nm)
             .map(|i| {
-                let z_minus_z2 = BigInt::mod_sub(&z_bn, &z_sq_bn, &order);
-                let yi_z_minus_z2 = BigInt::mod_mul(&z_minus_z2, &y_powers[i].clone(), &order);
-                let z_y_pow = BigInt::mod_mul(&z_bn, &y_pow, &order);
-                let di_z_y_pow = BigInt::mod_mul(&d[i], &z_y_pow, &order);
-                BigInt::mod_sub(&yi_z_minus_z2, &di_z_y_pow, &order)
+                let z_minus_z2 = BigInt::mod_sub(&z_bn, &z_sq_bn, order);
+                let yi_z_minus_z2 = BigInt::mod_mul(&z_minus_z2, &y_powers[i].clone(), order);
+                let z_y_pow = BigInt::mod_mul(&z_bn, &y_pow, order);
+                let di_z_y_pow = BigInt::mod_mul(&d[i], &z_y_pow, order);
+                BigInt::mod_sub(&yi_z_minus_z2, &di_z_y_pow, order)
             })
-            .fold(scalar1_G, |acc, x| BigInt::mod_add(&acc, &x, &order));
+            .fold(scalar1_G, |acc, x| BigInt::mod_add(&acc, &x, order));
 
         // compute exponents of g_vec
         let scalars_g_vec = (0..nm)
-            .map(|_| BigInt::mod_sub(&BigInt::zero(), &z_bn, &order))
+            .map(|_| BigInt::mod_sub(&BigInt::zero(), &z_bn, order))
             .collect::<Vec<BigInt>>();
 
         // compute exponents of h_vec
         let scalars_h_vec = (0..nm)
             .map(|i| {
-                let di_yi_rev = BigInt::mod_mul(&d[i], &y_powers_rev[i].clone(), &order);
-                BigInt::mod_add(&di_yi_rev, &z_bn, &order)
+                let di_yi_rev = BigInt::mod_mul(&d[i], &y_powers_rev[i].clone(), order);
+                BigInt::mod_add(&di_yi_rev, &z_bn, order)
             })
             .collect::<Vec<BigInt>>();
 
         let mut A_hat_scalars: Vec<BigInt> = Vec::with_capacity(2 * nm + 2);
         A_hat_scalars.extend_from_slice(&scalars_g_vec);
         A_hat_scalars.extend_from_slice(&scalars_h_vec);
-        A_hat_scalars.extend_from_slice(&[scalar_G.clone(), scalar_H.clone()]);
+        A_hat_scalars.extend_from_slice(&[scalar_G, scalar_H.clone()]);
 
         let mut A_hat_bases: Vec<Point<Secp256k1>> = Vec::with_capacity(2 * nm + 2);
         A_hat_bases.extend_from_slice(&g_vec);
@@ -258,14 +258,14 @@ impl RangeProofWIP {
 
         // compute aL_hat, aR_hat, alpha_hat
         let aL_hat = (0..nm)
-            .map(|i| BigInt::mod_add(&aL[i], &scalars_g_vec[i], &order))
+            .map(|i| BigInt::mod_add(&aL[i], &scalars_g_vec[i], order))
             .collect::<Vec<BigInt>>();
 
         let aR_hat = (0..nm)
-            .map(|i| BigInt::mod_add(&aR[i], &scalars_h_vec[i], &order))
+            .map(|i| BigInt::mod_add(&aR[i], &scalars_h_vec[i], order))
             .collect::<Vec<BigInt>>();
 
-        let alpha_hat = BigInt::mod_add(&alpha.to_bigint(), &scalar_H, &order);
+        let alpha_hat = BigInt::mod_add(&alpha.to_bigint(), &scalar_H, order);
 
         let L_vec = Vec::with_capacity(nm);
         let R_vec = Vec::with_capacity(nm);
@@ -273,10 +273,10 @@ impl RangeProofWIP {
             &g_vec, &h_vec, &G, &H, &A_hat, &aL_hat, &aR_hat, &alpha_hat, &y_bn, L_vec, R_vec,
         );
 
-        return RangeProofWIP {
+        RangeProofWIP {
             A,
             weighted_inner_product_proof,
-        };
+        }
     }
 
     pub fn verify(&self, stmt: StatementRP, ped_com: &[Point<Secp256k1>]) -> Result<(), Errors> {
@@ -299,17 +299,17 @@ impl RangeProofWIP {
         let yG: Point<Secp256k1> = base_point * &y;
         let z: Scalar<Secp256k1> = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
-        let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
+        let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, order);
 
         // y_vec = (y, y^2, ..., y^{nm})
-        let y_powers = iterate(y_bn.clone(), |i| BigInt::mod_mul(&i, &y_bn, &order))
+        let y_powers = iterate(y_bn.clone(), |i| BigInt::mod_mul(i, &y_bn, order))
             .take(nm)
             .collect::<Vec<BigInt>>();
         let mut y_powers_rev = y_powers.clone();
         y_powers_rev.reverse();
 
         // vec_2n = (1, 2, 4, ..., 2^{n-1})
-        let vec_2n = iterate(one.clone(), |i| i.clone() * &two)
+        let vec_2n = iterate(one, |i| i.clone() * &two)
             .take(bit_length)
             .collect::<Vec<BigInt>>();
 
@@ -325,39 +325,39 @@ impl RangeProofWIP {
                 let two_i = vec_2n[k].clone();
                 let j = i / bit_length;
                 let z_2j = vec_z2m[j].clone();
-                BigInt::mod_mul(&two_i, &z_2j, &order)
+                BigInt::mod_mul(&two_i, &z_2j, order)
             })
             .collect::<Vec<BigInt>>();
 
         // compute exponent of g
-        let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), &order);
+        let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), order);
         let scalar_G = (0..nm)
             .map(|i| {
-                let z_minus_z2 = BigInt::mod_sub(&z_bn, &z_sq_bn, &order);
-                let yi_z_minus_z2 = BigInt::mod_mul(&z_minus_z2, &y_powers[i].clone(), &order);
-                let z_y_pow = BigInt::mod_mul(&z_bn, &y_pow, &order);
-                let di_z_y_pow = BigInt::mod_mul(&d[i], &z_y_pow, &order);
-                BigInt::mod_sub(&yi_z_minus_z2, &di_z_y_pow, &order)
+                let z_minus_z2 = BigInt::mod_sub(&z_bn, &z_sq_bn, order);
+                let yi_z_minus_z2 = BigInt::mod_mul(&z_minus_z2, &y_powers[i].clone(), order);
+                let z_y_pow = BigInt::mod_mul(&z_bn, &y_pow, order);
+                let di_z_y_pow = BigInt::mod_mul(&d[i], &z_y_pow, order);
+                BigInt::mod_sub(&yi_z_minus_z2, &di_z_y_pow, order)
             })
-            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, order));
 
         // compute exponents of g_vec
         let scalars_g_vec = (0..nm)
-            .map(|_| BigInt::mod_sub(&BigInt::zero(), &z_bn, &order))
+            .map(|_| BigInt::mod_sub(&BigInt::zero(), &z_bn, order))
             .collect::<Vec<BigInt>>();
 
         // compute exponents of h_vec
         let scalars_h_vec = (0..nm)
             .map(|i| {
-                let di_yi_rev = BigInt::mod_mul(&d[i], &y_powers_rev[i].clone(), &order);
-                BigInt::mod_add(&di_yi_rev, &z_bn, &order)
+                let di_yi_rev = BigInt::mod_mul(&d[i], &y_powers_rev[i].clone(), order);
+                BigInt::mod_add(&di_yi_rev, &z_bn, order)
             })
             .collect::<Vec<BigInt>>();
 
         // compute product of commitments
         let sum_com = (0..num_of_proofs)
             .map(|i| {
-                let y_pow_z2i = BigInt::mod_mul(&y_pow, &vec_z2m[i].clone(), &order);
+                let y_pow_z2i = BigInt::mod_mul(&y_pow, &vec_z2m[i].clone(), order);
                 &ped_com[i] * &Scalar::<Secp256k1>::from(&y_pow_z2i)
             })
             .fold(self.A.clone(), |acc, x| acc + x as Point<Secp256k1>);
@@ -366,7 +366,7 @@ impl RangeProofWIP {
         let mut A_hat_scalars: Vec<BigInt> = Vec::with_capacity(2 * nm + 2);
         A_hat_scalars.extend_from_slice(&scalars_g_vec);
         A_hat_scalars.extend_from_slice(&scalars_h_vec);
-        A_hat_scalars.extend_from_slice(&[scalar_G.clone()]);
+        A_hat_scalars.extend_from_slice(&[scalar_G]);
 
         let mut A_hat_bases: Vec<Point<Secp256k1>> = Vec::with_capacity(2 * nm + 2);
         A_hat_bases.extend_from_slice(&g_vec);
@@ -375,7 +375,7 @@ impl RangeProofWIP {
 
         let A_hat = (0..(2 * nm + 1))
             .map(|i| &A_hat_bases[i] * &Scalar::<Secp256k1>::from(&A_hat_scalars[i]))
-            .fold(sum_com.clone(), |acc, x| acc + x as Point<Secp256k1>);
+            .fold(sum_com, |acc, x| acc + x as Point<Secp256k1>);
 
         let verify = self
             .weighted_inner_product_proof
@@ -429,17 +429,17 @@ impl RangeProofWIP {
         let yG: Point<Secp256k1> = base_point * &y;
         let z: Scalar<Secp256k1> = Sha256::new().chain_points([&self.A, &yG]).result_scalar();
         let z_bn = z.to_bigint();
-        let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, &order);
+        let z_sq_bn = BigInt::mod_mul(&z_bn, &z_bn, order);
 
         // y_vec = (y, y^2, ..., y^{nm})
-        let y_powers = iterate(y_bn.clone(), |i| BigInt::mod_mul(&i, &y_bn, &order))
+        let y_powers = iterate(y_bn.clone(), |i| BigInt::mod_mul(i, &y_bn, order))
             .take(nm)
             .collect::<Vec<BigInt>>();
         let mut y_powers_rev = y_powers.clone();
         y_powers_rev.reverse();
 
         // vec_2n = (1, 2, 4, ..., 2^{n-1})
-        let vec_2n = iterate(one.clone(), |i| i.clone() * &two)
+        let vec_2n = iterate(one, |i| i.clone() * &two)
             .take(n)
             .collect::<Vec<BigInt>>();
 
@@ -456,12 +456,12 @@ impl RangeProofWIP {
                 let two_i = vec_2n[k].clone();
                 let j = i / n;
                 let z_2j = vec_z2m[j].clone();
-                BigInt::mod_mul(&two_i, &z_2j, &order)
+                BigInt::mod_mul(&two_i, &z_2j, order)
             })
             .collect::<Vec<BigInt>>();
 
         // compute powers of y_inv
-        let y_inv = BigInt::mod_inv(&y_bn, &order).unwrap();
+        let y_inv = BigInt::mod_inv(&y_bn, order).unwrap();
         let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
             .take(nm)
             .collect::<Vec<BigInt>>();
@@ -469,10 +469,10 @@ impl RangeProofWIP {
         // compute challenge e
 
         let e: Scalar<Secp256k1> = Sha256::new()
-            .chain_points([&wip.a_tag, &wip.b_tag, &g, &h])
+            .chain_points([&wip.a_tag, &wip.b_tag, g, h])
             .result_scalar();
         let e_bn = e.to_bigint();
-        let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
+        let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, order);
 
         let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
         let mut minus_e_sq_x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_nm);
@@ -484,28 +484,28 @@ impl RangeProofWIP {
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
-            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
-            let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, &order);
-            let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, &order);
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), order);
+            let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, order);
+            let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, order);
 
             x_sq_vec.push(x_sq_bn.clone());
-            minus_e_sq_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &e_sq_x_sq_bn, &order));
+            minus_e_sq_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &e_sq_x_sq_bn, order));
             minus_e_sq_x_inv_sq_vec.push(BigInt::mod_sub(
                 &BigInt::zero(),
                 &e_sq_x_inv_sq_bn,
-                &order,
+                order,
             ));
-            allinv = allinv * x_inv_bn;
-            all = all * x_bn;
+            allinv *= x_inv_bn;
+            all *= x_bn;
         }
 
         let mut s: Vec<BigInt> = Vec::with_capacity(nm);
         let mut sg: Vec<BigInt> = Vec::with_capacity(nm);
         let mut sh: Vec<BigInt> = Vec::with_capacity(nm);
         s.push(allinv.clone());
-        sg.push(allinv.clone());
-        sh.push(all.clone());
+        sg.push(allinv);
+        sh.push(all);
         for i in 1..nm {
             let lg_i =
                 (std::mem::size_of_val(&nm) * 8) - 1 - ((i as usize).leading_zeros() as usize);
@@ -514,8 +514,8 @@ impl RangeProofWIP {
             // so u_{lg(i)+1} = is indexed by (lg_nm-1) - lg_i
             let x_lg_i_sq = x_sq_vec[(lg_nm - 1) - lg_i].clone();
             s.push(s[i - k].clone() * x_lg_i_sq);
-            let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
-            let si_yi = BigInt::mod_mul(&s[i], &powers_yinv[i - 1], &order);
+            let s_inv_i = BigInt::mod_inv(&s[i], order).unwrap();
+            let si_yi = BigInt::mod_mul(&s[i], &powers_yinv[i - 1], order);
 
             sg.push(si_yi);
             sh.push(s_inv_i);
@@ -524,41 +524,41 @@ impl RangeProofWIP {
         // Scalar exponents of LHS
         //
         // compute exponent of g
-        let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), &order);
+        let y_pow = BigInt::mod_pow(&y_bn, &BigInt::from((nm + 1) as u32), order);
         // ζ(y,z) = (z - z^2)<1^{mn}, y^{mn}> - (z y^{mn+1})<1^{mn}, d_vec>
         let zeta = (0..nm)
             .map(|i| {
-                let z_minus_z2 = BigInt::mod_sub(&z_bn, &z_sq_bn, &order);
-                let yi_z_minus_z2 = BigInt::mod_mul(&z_minus_z2, &y_powers[i].clone(), &order);
-                let z_y_pow = BigInt::mod_mul(&z_bn, &y_pow, &order);
-                let di_z_y_pow = BigInt::mod_mul(&d[i], &z_y_pow, &order);
-                BigInt::mod_sub(&yi_z_minus_z2, &di_z_y_pow, &order)
+                let z_minus_z2 = BigInt::mod_sub(&z_bn, &z_sq_bn, order);
+                let yi_z_minus_z2 = BigInt::mod_mul(&z_minus_z2, &y_powers[i].clone(), order);
+                let z_y_pow = BigInt::mod_mul(&z_bn, &y_pow, order);
+                let di_z_y_pow = BigInt::mod_mul(&d[i], &z_y_pow, order);
+                BigInt::mod_sub(&yi_z_minus_z2, &di_z_y_pow, order)
             })
-            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
-        let e_sq_zeta = BigInt::mod_mul(&zeta, &e_sq_bn, &order);
-        let r_times_s = BigInt::mod_mul(&wip.r_prime, &wip.s_prime, &order);
-        let r_times_s_y = BigInt::mod_mul(&r_times_s, &y_bn, &order);
-        let scalar_g = BigInt::mod_sub(&r_times_s_y, &e_sq_zeta, &order);
+            .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, order));
+        let e_sq_zeta = BigInt::mod_mul(&zeta, &e_sq_bn, order);
+        let r_times_s = BigInt::mod_mul(&wip.r_prime, &wip.s_prime, order);
+        let r_times_s_y = BigInt::mod_mul(&r_times_s, &y_bn, order);
+        let scalar_g = BigInt::mod_sub(&r_times_s_y, &e_sq_zeta, order);
 
         // exponent of g_vec
-        let e_rprime = BigInt::mod_mul(&wip.r_prime, &e_bn, &order);
-        let e_sq_z = BigInt::mod_mul(&z_bn, &e_sq_bn, &order);
+        let e_rprime = BigInt::mod_mul(&wip.r_prime, &e_bn, order);
+        let e_sq_z = BigInt::mod_mul(&z_bn, &e_sq_bn, order);
         let scalar_g_vec: Vec<BigInt> = (0..nm)
             .map(|i| {
-                let e_rprime_sg_i = BigInt::mod_mul(&e_rprime, &sg[i], &order);
-                BigInt::mod_add(&e_rprime_sg_i, &e_sq_z, &order)
+                let e_rprime_sg_i = BigInt::mod_mul(&e_rprime, &sg[i], order);
+                BigInt::mod_add(&e_rprime_sg_i, &e_sq_z, order)
             })
             .collect();
 
         // exponent of h_vec
-        let e_sprime = BigInt::mod_mul(&wip.s_prime, &e_bn, &order);
+        let e_sprime = BigInt::mod_mul(&wip.s_prime, &e_bn, order);
         let scalar_h_vec: Vec<BigInt> = (0..nm)
             .map(|i| {
-                let di_yi_rev = BigInt::mod_mul(&d[i], &y_powers_rev[i].clone(), &order);
-                let di_yi_rev_e_sq = BigInt::mod_mul(&di_yi_rev, &e_sq_bn, &order);
-                let e_sprime_sh_i = BigInt::mod_mul(&e_sprime, &sh[i], &order);
-                let e_sprime_sh_minus_e_sq = BigInt::mod_sub(&e_sprime_sh_i, &e_sq_z, &order);
-                BigInt::mod_sub(&e_sprime_sh_minus_e_sq, &di_yi_rev_e_sq, &order)
+                let di_yi_rev = BigInt::mod_mul(&d[i], &y_powers_rev[i].clone(), order);
+                let di_yi_rev_e_sq = BigInt::mod_mul(&di_yi_rev, &e_sq_bn, order);
+                let e_sprime_sh_i = BigInt::mod_mul(&e_sprime, &sh[i], order);
+                let e_sprime_sh_minus_e_sq = BigInt::mod_sub(&e_sprime_sh_i, &e_sq_z, order);
+                BigInt::mod_sub(&e_sprime_sh_minus_e_sq, &di_yi_rev_e_sq, order)
             })
             .collect();
 
@@ -567,17 +567,17 @@ impl RangeProofWIP {
         let scalar_R = minus_e_sq_x_inv_sq_vec;
 
         // exponent of P
-        let minus_e_sq = BigInt::mod_sub(&BigInt::zero(), &e_sq_bn, &order);
+        let minus_e_sq = BigInt::mod_sub(&BigInt::zero(), &e_sq_bn, order);
         let scalar_P = minus_e_sq.clone();
 
         // exponents of V_j (commitments)
-        let minus_e_sq_y_pow = BigInt::mod_mul(&minus_e_sq, &y_pow, &order);
+        let minus_e_sq_y_pow = BigInt::mod_mul(&minus_e_sq, &y_pow, order);
         let scalar_com: Vec<BigInt> = (0..m)
-            .map(|i| BigInt::mod_mul(&vec_z2m[i], &minus_e_sq_y_pow, &order))
+            .map(|i| BigInt::mod_mul(&vec_z2m[i], &minus_e_sq_y_pow, order))
             .collect();
 
         // exponents of A
-        let scalar_A = BigInt::mod_sub(&BigInt::zero(), &e_bn, &order);
+        let scalar_A = BigInt::mod_sub(&BigInt::zero(), &e_bn, order);
 
         // compute concatenated exponent vector
         let mut scalars: Vec<BigInt> = Vec::with_capacity(2 * nm + 2 * lg_nm + m + 5);
@@ -598,7 +598,7 @@ impl RangeProofWIP {
         points.extend_from_slice(&wip.L);
         points.extend_from_slice(&wip.R);
         points.push(P.clone());
-        points.extend_from_slice(&ped_com);
+        points.extend_from_slice(ped_com);
         points.push(wip.a_tag.clone());
 
         let h_delta_prime = h * &Scalar::<Secp256k1>::from(&wip.delta_prime);
@@ -625,7 +625,7 @@ mod tests {
 
     pub fn test_helper(seed: &BigInt, n: usize, m: usize) {
         // generate stmt
-        let stmt = StatementRP::generate_bases(&seed, m, n);
+        let stmt = StatementRP::generate_bases(seed, m, n);
 
         // generate witness
         let G = stmt.G.clone();
@@ -641,20 +641,20 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
-                ped_com
+                
+                &G * &v_vec[i] + &H * &r_vec[i]
             })
             .collect::<Vec<Point<Secp256k1>>>();
 
         // simulate range proof
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
-        let result = RangeProofWIP::aggregated_verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
+        let result = RangeProofWIP::aggregated_verify(&range_proof_wip, stmt, &ped_com_vec);
         assert!(result.is_ok());
     }
 
     pub fn test_helper_aggregate(seed: &BigInt, n: usize, m: usize) {
         // generate stmt
-        let stmt = StatementRP::generate_bases(&seed, m, n);
+        let stmt = StatementRP::generate_bases(seed, m, n);
 
         // generate witness
         let G = stmt.G.clone();
@@ -670,14 +670,14 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
-                ped_com
+                
+                &G * &v_vec[i] + &H * &r_vec[i]
             })
             .collect::<Vec<Point<Secp256k1>>>();
 
         // simulate range proof
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
-        let result = RangeProofWIP::aggregated_verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
+        let result = RangeProofWIP::aggregated_verify(&range_proof_wip, stmt, &ped_com_vec);
         assert!(result.is_ok());
     }
 
@@ -705,13 +705,13 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
-                ped_com
+                
+                &G * &v_vec[i] + &H * &r_vec[i]
             })
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
-        let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
+        let result = RangeProofWIP::verify(&range_proof_wip, stmt, &ped_com_vec);
         assert!(result.is_ok());
     }
 
@@ -743,13 +743,13 @@ mod tests {
 
         let ped_com_vec = (0..m)
             .map(|i| {
-                let ped_com = &G * &v_vec[i] + &H * &r_vec[i];
-                ped_com
+                
+                &G * &v_vec[i] + &H * &r_vec[i]
             })
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
-        let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
+        let result = RangeProofWIP::verify(&range_proof_wip, stmt, &ped_com_vec);
         assert!(result.is_ok());
     }
 

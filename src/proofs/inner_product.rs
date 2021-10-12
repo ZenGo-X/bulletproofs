@@ -61,8 +61,8 @@ impl InnerProductArg {
             let (G_L, G_R) = G.split_at(n);
             let (H_L, H_R) = H.split_at(n);
 
-            let c_L = inner_product(&a_L, &b_R);
-            let c_R = inner_product(&a_R, &b_L);
+            let c_L = inner_product(a_L, b_R);
+            let c_R = inner_product(a_R, b_L);
 
             // Note that no element in vectors a_L and b_R can be 0
             // since 0 is an invalid secret key!
@@ -70,7 +70,7 @@ impl InnerProductArg {
             // L = <a_L * G_R> + <b_R * H_L> + c_L * ux
             let c_L_fe = Scalar::<Secp256k1>::from(&c_L);
             let ux_CL: Point<Secp256k1> = ux * &c_L_fe;
-            let aL_GR = G_R.iter().zip(a_L.clone()).fold(ux_CL, |acc, x| {
+            let aL_GR = G_R.iter().zip(a_L).fold(ux_CL, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let aLi = Scalar::<Secp256k1>::from(x.1);
                     let aLi_GRi: Point<Secp256k1> = x.0 * &aLi;
@@ -79,7 +79,7 @@ impl InnerProductArg {
                     acc
                 }
             });
-            let L = H_L.iter().zip(b_R.clone()).fold(aL_GR, |acc, x| {
+            let L = H_L.iter().zip(b_R).fold(aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let bRi = Scalar::<Secp256k1>::from(x.1);
                     let bRi_HLi: Point<Secp256k1> = x.0 * &bRi;
@@ -95,7 +95,7 @@ impl InnerProductArg {
             // R = <a_R * G_L> + <b_L * H_R> + c_R * ux
             let c_R_fe = Scalar::<Secp256k1>::from(&c_R);
             let ux_CR: Point<Secp256k1> = ux * &c_R_fe;
-            let aR_GL = G_L.iter().zip(a_R.clone()).fold(ux_CR, |acc, x| {
+            let aR_GL = G_L.iter().zip(a_R).fold(ux_CR, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let aRi = Scalar::<Secp256k1>::from(x.1);
                     let aRi_GLi: Point<Secp256k1> = x.0 * &aRi;
@@ -104,7 +104,7 @@ impl InnerProductArg {
                     acc
                 }
             });
-            let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
+            let R = H_R.iter().zip(b_L).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
                     let bLi = Scalar::<Secp256k1>::from(x.1);
                     let bLi_HRi: Point<Secp256k1> = x.0 * &bLi;
@@ -114,25 +114,25 @@ impl InnerProductArg {
                 }
             });
 
-            let x = Sha256::new().chain_points([&L, &R, &ux]).result_scalar();
+            let x = Sha256::new().chain_points([&L, &R, ux]).result_scalar();
             let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::group_order();
             let x_inv_fe = x.invert().unwrap();
 
             let a_new = (0..n)
                 .map(|i| {
-                    let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
-                    let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_bigint(), &order);
-                    BigInt::mod_add(&aLx, &aR_minusx, &order)
+                    let aLx = BigInt::mod_mul(&a_L[i], &x_bn, order);
+                    let aR_minusx = BigInt::mod_mul(&a_R[i], &x_inv_fe.to_bigint(), order);
+                    BigInt::mod_add(&aLx, &aR_minusx, order)
                 })
                 .collect::<Vec<BigInt>>();
             //   a = &mut a_new[..];
 
             let b_new = (0..n)
                 .map(|i| {
-                    let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
-                    let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_bigint(), &order);
-                    BigInt::mod_add(&bRx, &bL_minusx, &order)
+                    let bRx = BigInt::mod_mul(&b_R[i], &x_bn, order);
+                    let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_bigint(), order);
+                    BigInt::mod_add(&bRx, &bL_minusx, order)
                 })
                 .collect::<Vec<BigInt>>();
             //    b = &mut b_new[..];
@@ -157,7 +157,7 @@ impl InnerProductArg {
 
             L_vec.push(L);
             R_vec.push(R);
-            return InnerProductArg::prove(&G_new, &H_new, &ux, &P, &a_new, &b_new, L_vec, R_vec);
+            return InnerProductArg::prove(&G_new, &H_new, ux, P, &a_new, &b_new, L_vec, R_vec);
         }
 
         InnerProductArg {
@@ -175,8 +175,8 @@ impl InnerProductArg {
         ux: &Point<Secp256k1>,
         P: &Point<Secp256k1>,
     ) -> Result<(), Errors> {
-        let G = &g_vec[..];
-        let H = &hi_tag[..];
+        let G = g_vec;
+        let H = hi_tag;
         let n = G.len();
 
         // All of the input vectors must have the same length.
@@ -190,13 +190,13 @@ impl InnerProductArg {
             let (H_L, H_R) = H.split_at(n);
 
             let x = Sha256::new()
-                .chain_points([&self.L[0], &self.R[0], &ux])
+                .chain_points([&self.L[0], &self.R[0], ux])
                 .result_scalar();
             let x_bn = x.to_bigint();
             let order = Scalar::<Secp256k1>::group_order();
             let x_inv_fe = x.invert().unwrap();
-            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), order);
             let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
             let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
@@ -257,8 +257,8 @@ impl InnerProductArg {
         ux: &Point<Secp256k1>,
         P: &Point<Secp256k1>,
     ) -> Result<(), Errors> {
-        let G = &g_vec[..];
-        let H = &hi_tag[..];
+        let G = g_vec;
+        let H = hi_tag;
         let n = G.len();
         let order = Scalar::<Secp256k1>::group_order();
 
@@ -283,14 +283,14 @@ impl InnerProductArg {
             let x_bn = x.to_bigint();
             let x_inv_fe = x.invert().unwrap();
             let x_inv_bn = x_inv_fe.to_bigint();
-            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), &order);
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), order);
 
             x_sq_vec.push(x_sq_bn.clone());
             x_inv_sq_vec.push(x_inv_sq_bn.clone());
-            minus_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_sq_bn, &order));
-            minus_x_inv_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_inv_sq_bn, &order));
-            allinv = allinv * x_inv_bn;
+            minus_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_sq_bn, order));
+            minus_x_inv_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &x_inv_sq_bn, order));
+            allinv *= x_inv_bn;
         }
 
         let mut s: Vec<BigInt> = Vec::with_capacity(n);
@@ -306,13 +306,13 @@ impl InnerProductArg {
         }
 
         let a_times_s: Vec<BigInt> = (0..n)
-            .map(|i| BigInt::mod_mul(&s[i], &self.a_tag, &order))
+            .map(|i| BigInt::mod_mul(&s[i], &self.a_tag, order))
             .collect();
 
         let b_div_s: Vec<BigInt> = (0..n)
             .map(|i| {
-                let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
-                BigInt::mod_mul(&s_inv_i, &self.b_tag, &order)
+                let s_inv_i = BigInt::mod_inv(&s[i], order).unwrap();
+                BigInt::mod_mul(&s_inv_i, &self.b_tag, order)
             })
             .collect();
 
@@ -328,7 +328,7 @@ impl InnerProductArg {
         points.extend_from_slice(&self.L);
         points.extend_from_slice(&self.R);
 
-        let c = BigInt::mod_mul(&self.a_tag, &self.b_tag, &order);
+        let c = BigInt::mod_mul(&self.a_tag, &self.b_tag, order);
         let ux_c = ux * &Scalar::<Secp256k1>::from(&c);
 
         let tot_len = points.len();
@@ -354,10 +354,10 @@ fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
     let out = BigInt::zero();
     let order = Scalar::<Secp256k1>::group_order();
     let out = a.iter().zip(b).fold(out, |acc, x| {
-        let aibi = BigInt::mod_mul(x.0, x.1, &order);
-        BigInt::mod_add(&acc, &aibi, &order)
+        let aibi = BigInt::mod_mul(x.0, x.1, order);
+        BigInt::mod_add(&acc, &aibi, order)
     });
-    return out;
+    out
 }
 
 #[cfg(test)]
@@ -413,7 +413,7 @@ mod tests {
         let y = Scalar::<Secp256k1>::random();
         let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
@@ -493,7 +493,7 @@ mod tests {
         let y = Scalar::<Secp256k1>::random();
         let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
@@ -555,12 +555,12 @@ mod tests {
         let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let Gx = generate_random_point(&Converter::to_bytes(&hash));
 
-        let c = super::inner_product(&a, &b);
+        let c = super::inner_product(a, b);
 
         let y = Scalar::<Secp256k1>::random();
         let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
@@ -594,7 +594,7 @@ mod tests {
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
-        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, &Gx, &P, &a, &b, L_vec, R_vec);
+        let ipp = InnerProductArg::prove(&g_vec, &hi_tag, &Gx, &P, a, b, L_vec, R_vec);
         let verifier = ipp.verify(&g_vec, &hi_tag, &Gx, &P);
         assert!(verifier.is_ok())
     }

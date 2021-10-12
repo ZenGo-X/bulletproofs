@@ -70,8 +70,8 @@ mod bench_range_proof {
                 let v_vec = (0..m)
                     .map(|_i| {
                         let v = BigInt::sample_below(&range);
-                        let v_fe = Scalar::<Secp256k1>::from(&v);
-                        v_fe
+                        
+                        Scalar::<Secp256k1>::from(&v)
                     })
                     .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -81,13 +81,13 @@ mod bench_range_proof {
 
                 let ped_com_vec = (0..m)
                     .map(|i| {
-                        let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                        ped_com
+                        
+                        g * &v_vec[i] + &h * &r_vec[i]
                     })
                     .collect::<Vec<Point<Secp256k1>>>();
 
                 let range_proof =
-                    RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+                    RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
                 b.iter(|| {
                     let result = RangeProof::aggregated_verify(
@@ -142,8 +142,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -153,8 +153,8 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
@@ -204,8 +204,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -253,8 +253,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -264,12 +264,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -315,8 +315,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -326,12 +326,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -377,8 +377,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -426,8 +426,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -437,12 +437,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -488,8 +488,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -537,8 +537,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -548,12 +548,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -599,8 +599,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -648,8 +648,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -659,12 +659,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -710,8 +710,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -759,8 +759,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -770,12 +770,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -821,8 +821,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -870,8 +870,8 @@ mod bench_range_proof {
             let v_vec = (0..m)
                 .map(|_i| {
                     let v = BigInt::sample_below(&range);
-                    let v_fe = Scalar::<Secp256k1>::from(&v);
-                    v_fe
+                    
+                    Scalar::<Secp256k1>::from(&v)
                 })
                 .collect::<Vec<Scalar<Secp256k1>>>();
 
@@ -881,12 +881,12 @@ mod bench_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = g * &v_vec[i] + &h * &r_vec[i];
-                    ped_com
+                    
+                    g * &v_vec[i] + &h * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec.clone(), &r_vec, n);
+            let range_proof = RangeProof::prove(&g_vec, &h_vec, &g, &h, v_vec, &r_vec, n);
 
             b.iter(|| {
                 let result =
@@ -956,12 +956,12 @@ mod bench_wip_range_proof {
 
                 let ped_com_vec = (0..m)
                     .map(|i| {
-                        let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                        ped_com
+                        
+                        G * &v_vec[i] + H * &r_vec[i]
                     })
                     .collect::<Vec<Point<Secp256k1>>>();
 
-                let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+                let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
                 b.iter(|| {
                     let result = RangeProofWIP::aggregated_verify(
@@ -1001,8 +1001,8 @@ mod bench_wip_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                    ped_com
+                    
+                    G * &v_vec[i] + H * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
@@ -1068,12 +1068,12 @@ mod bench_wip_range_proof {
 
                 let ped_com_vec = (0..m)
                     .map(|i| {
-                        let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                        ped_com
+                        
+                        G * &v_vec[i] + H * &r_vec[i]
                     })
                     .collect::<Vec<Point<Secp256k1>>>();
 
-                let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+                let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
                 b.iter(|| {
                     let result =
@@ -1136,12 +1136,12 @@ mod bench_wip_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                    ped_com
+                    
+                    G * &v_vec[i] + H * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
             b.iter(|| {
                 let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
@@ -1202,12 +1202,12 @@ mod bench_wip_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                    ped_com
+                    
+                    G * &v_vec[i] + H * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
             b.iter(|| {
                 let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
@@ -1268,12 +1268,12 @@ mod bench_wip_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                    ped_com
+                    
+                    G * &v_vec[i] + H * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
             b.iter(|| {
                 let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
@@ -1334,12 +1334,12 @@ mod bench_wip_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                    ped_com
+                    
+                    G * &v_vec[i] + H * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
             b.iter(|| {
                 let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
@@ -1400,12 +1400,12 @@ mod bench_wip_range_proof {
 
             let ped_com_vec = (0..m)
                 .map(|i| {
-                    let ped_com = G * &v_vec[i] + H * &r_vec[i];
-                    ped_com
+                    
+                    G * &v_vec[i] + H * &r_vec[i]
                 })
                 .collect::<Vec<Point<Secp256k1>>>();
 
-            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec.clone(), &r_vec);
+            let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
 
             b.iter(|| {
                 let result = RangeProofWIP::verify(&range_proof_wip, stmt.clone(), &ped_com_vec);
