@@ -101,16 +101,10 @@ impl RangeProof {
             },
         );
 
-        A = h_vec.iter().zip(secret_bits).fold(
-            A,
-            |acc, x| {
-                if !x.1 {
-                    acc - x.0
-                } else {
-                    acc
-                }
-            },
-        );
+        A = h_vec
+            .iter()
+            .zip(secret_bits)
+            .fold(A, |acc, x| if !x.1 { acc - x.0 } else { acc });
 
         let SR = (0..nm)
             .map(|_| Scalar::<Secp256k1>::random())
@@ -858,10 +852,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &*G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &*G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
@@ -903,10 +894,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &*G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &*G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
@@ -956,10 +944,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &*G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &*G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
@@ -1012,10 +997,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &*G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &*G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
@@ -1064,10 +1046,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &*G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &*G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);
@@ -1119,10 +1098,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &*G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &*G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof = RangeProof::prove(&g_vec, &h_vec, &G, &H, v_vec, &r_vec, n);

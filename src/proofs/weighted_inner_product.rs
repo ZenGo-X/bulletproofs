@@ -526,7 +526,6 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
         .take(a.len())
         .collect::<Vec<BigInt>>();
     let n = a.len();
-    
 
     (0..n)
         .map(|i| {

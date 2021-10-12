@@ -159,16 +159,10 @@ impl RangeProofWIP {
                 }
             },
         );
-        A = h_vec.iter().zip(secret_bits).fold(
-            A,
-            |acc, x| {
-                if !x.1 {
-                    acc - x.0
-                } else {
-                    acc
-                }
-            },
-        );
+        A = h_vec
+            .iter()
+            .zip(secret_bits)
+            .fold(A, |acc, x| if !x.1 { acc - x.0 } else { acc });
 
         let y = Sha256::new().chain_points([&A]).result_scalar();
         let y_bn = y.to_bigint();
@@ -640,10 +634,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         // simulate range proof
@@ -669,10 +660,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         // simulate range proof
@@ -704,10 +692,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
@@ -742,10 +727,7 @@ mod tests {
             .collect::<Vec<Scalar<Secp256k1>>>();
 
         let ped_com_vec = (0..m)
-            .map(|i| {
-                
-                &G * &v_vec[i] + &H * &r_vec[i]
-            })
+            .map(|i| &G * &v_vec[i] + &H * &r_vec[i])
             .collect::<Vec<Point<Secp256k1>>>();
 
         let range_proof_wip = RangeProofWIP::prove(stmt.clone(), v_vec, &r_vec);
