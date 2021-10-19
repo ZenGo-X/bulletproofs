@@ -23,13 +23,10 @@ version 3 of the License, or (at your option) any later version.
 //
 
 use curv::arithmetic::traits::*;
-use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
-use curv::cryptographic_primitives::hashing::traits::*;
-use curv::elliptic::curves::traits::*;
+use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
 use curv::BigInt;
-
-type GE = curv::elliptic::curves::secp256_k1::GE;
-type FE = curv::elliptic::curves::secp256_k1::FE;
+use sha2::Sha256;
 
 use itertools::iterate;
 
@@ -37,10 +34,10 @@ use Errors::{self, WeightedInnerProdError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WeightedInnerProdArg {
-    pub(super) L: Vec<GE>,
-    pub(super) R: Vec<GE>,
-    pub(super) a_tag: GE,
-    pub(super) b_tag: GE,
+    pub(super) L: Vec<Point<Secp256k1>>,
+    pub(super) R: Vec<Point<Secp256k1>>,
+    pub(super) a_tag: Point<Secp256k1>,
+    pub(super) b_tag: Point<Secp256k1>,
     pub(super) r_prime: BigInt,
     pub(super) s_prime: BigInt,
     pub(super) delta_prime: BigInt,
@@ -48,20 +45,20 @@ pub struct WeightedInnerProdArg {
 
 impl WeightedInnerProdArg {
     pub fn prove(
-        G: &[GE],
-        H: &[GE],
-        g: &GE,
-        h: &GE,
-        P: &GE,
+        G: &[Point<Secp256k1>],
+        H: &[Point<Secp256k1>],
+        g: &Point<Secp256k1>,
+        h: &Point<Secp256k1>,
+        P: &Point<Secp256k1>,
         a: &[BigInt],
         b: &[BigInt],
         alpha: &BigInt,
         y: &BigInt,
-        mut L_vec: Vec<GE>,
-        mut R_vec: Vec<GE>,
+        mut L_vec: Vec<Point<Secp256k1>>,
+        mut R_vec: Vec<Point<Secp256k1>>,
     ) -> WeightedInnerProdArg {
         let n = G.len();
-        let order = FE::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
@@ -70,7 +67,7 @@ impl WeightedInnerProdArg {
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let y_inv = BigInt::mod_inv(&y, &order).unwrap();
+        let y_inv = BigInt::mod_inv(y, order).unwrap();
         let powers_y = iterate(y.clone(), |i| i.clone() * y)
             .take(n)
             .collect::<Vec<BigInt>>();
@@ -91,38 +88,38 @@ impl WeightedInnerProdArg {
             let (H_L, H_R) = H.split_at(n);
 
             let yn_aR = (0..n)
-                .map(|i| BigInt::mod_mul(&powers_y[n - 1], &a_R[i], &order))
+                .map(|i| BigInt::mod_mul(&powers_y[n - 1], &a_R[i], order))
                 .collect::<Vec<BigInt>>();
             let yninv_aL = (0..n)
-                .map(|i| BigInt::mod_mul(&powers_yinv[n - 1], &a_L[i], &order))
+                .map(|i| BigInt::mod_mul(&powers_yinv[n - 1], &a_L[i], order))
                 .collect::<Vec<BigInt>>();
 
-            let c_L = weighted_inner_product(&a_L, &b_R, y.clone());
+            let c_L = weighted_inner_product(a_L, b_R, y.clone());
             let c_R = weighted_inner_product(&yn_aR, b_L, y.clone());
 
             // Note that no element in vectors a_L and b_R can be 0
             // since 0 is an invalid secret key!
             //
             // L = <yninv_aL * G_R> + <b_R * H_L> + (c_L * g) + (d_L * h)
-            let c_L_fe: FE = ECScalar::from(&c_L);
-            let g_cL: GE = g * &c_L_fe;
-            let d_L_fe: FE = ECScalar::new_random();
+            let c_L_fe = Scalar::<Secp256k1>::from(&c_L);
+            let g_cL: Point<Secp256k1> = g * &c_L_fe;
+            let d_L_fe = Scalar::<Secp256k1>::random();
             let h_dL = h * &d_L_fe;
-            let g_cL_h_dL = g_cL.add_point(&h_dL.get_element());
-            let yninv_aL_GR = G_R.iter().zip(yninv_aL.clone()).fold(g_cL_h_dL, |acc, x| {
+            let g_cL_h_dL = g_cL + &h_dL;
+            let yninv_aL_GR = G_R.iter().zip(yninv_aL).fold(g_cL_h_dL, |acc, x| {
                 if x.1 != BigInt::zero() {
-                    let aLi: FE = ECScalar::from(&x.1);
-                    let aLi_GRi: GE = x.0 * &aLi;
-                    acc.add_point(&aLi_GRi.get_element())
+                    let aLi = Scalar::<Secp256k1>::from(&x.1);
+                    let aLi_GRi: Point<Secp256k1> = x.0 * &aLi;
+                    acc + &aLi_GRi
                 } else {
                     acc
                 }
             });
-            let L = H_L.iter().zip(b_R.clone()).fold(yninv_aL_GR, |acc, x| {
+            let L = H_L.iter().zip(b_R).fold(yninv_aL_GR, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bRi: FE = ECScalar::from(&x.1);
-                    let bRi_HLi: GE = x.0 * &bRi;
-                    acc.add_point(&bRi_HLi.get_element())
+                    let bRi = Scalar::<Secp256k1>::from(x.1);
+                    let bRi_HLi: Point<Secp256k1> = x.0 * &bRi;
+                    acc + &bRi_HLi
                 } else {
                     acc
                 }
@@ -132,25 +129,25 @@ impl WeightedInnerProdArg {
             // since 0 is an invalid secret key!
             //
             // R = <yn_aR * G_R> + <b_R * H_L> + (c_R * g) + (d_R * h)
-            let c_R_fe: FE = ECScalar::from(&c_R);
-            let g_cR: GE = g * &c_R_fe;
-            let d_R_fe: FE = ECScalar::new_random();
+            let c_R_fe = Scalar::<Secp256k1>::from(&c_R);
+            let g_cR: Point<Secp256k1> = g * &c_R_fe;
+            let d_R_fe = Scalar::<Secp256k1>::random();
             let h_dR = h * &d_R_fe;
-            let g_cR_h_dR = g_cR.add_point(&h_dR.get_element());
+            let g_cR_h_dR = g_cR + &h_dR;
             let aR_GL = G_L.iter().zip(yn_aR.clone()).fold(g_cR_h_dR, |acc, x| {
                 if x.1 != BigInt::zero() {
-                    let aRi: FE = ECScalar::from(&x.1);
-                    let aRi_GLi: GE = x.0 * &aRi;
-                    acc.add_point(&aRi_GLi.get_element())
+                    let aRi = Scalar::<Secp256k1>::from(&x.1);
+                    let aRi_GLi: Point<Secp256k1> = x.0 * &aRi;
+                    acc + &aRi_GLi
                 } else {
                     acc
                 }
             });
-            let R = H_R.iter().zip(b_L.clone()).fold(aR_GL, |acc, x| {
+            let R = H_R.iter().zip(b_L).fold(aR_GL, |acc, x| {
                 if x.1 != &BigInt::zero() {
-                    let bLi: FE = ECScalar::from(&x.1);
-                    let bLi_HRi: GE = x.0 * &bLi;
-                    acc.add_point(&bLi_HRi.get_element())
+                    let bLi = Scalar::<Secp256k1>::from(x.1);
+                    let bLi_HRi: Point<Secp256k1> = x.0 * &bLi;
+                    acc + &bLi_HRi
                 } else {
                     acc
                 }
@@ -158,44 +155,44 @@ impl WeightedInnerProdArg {
 
             // the challenges in pre-final rounds are used as [x_1, x_2, ...]
             // to avoid confusion with the challenge `e` in last round
-            let x = HSha256::create_hash_from_ge(&[&L, &R, &g, &h]);
-            let x_bn = x.to_big_int();
-            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_sq_inv_bn = BigInt::mod_inv(&x_sq_bn, &order).unwrap();
-            let x_inv_fe = x.invert();
+            let x = Sha256::new().chain_points([&L, &R, g, h]).result_scalar();
+            let x_bn = x.to_bigint();
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, order);
+            let x_sq_inv_bn = BigInt::mod_inv(&x_sq_bn, order).unwrap();
+            let x_inv_fe = x.invert().unwrap();
 
             let a_hat = (0..n)
                 .map(|i| {
-                    let aLx = BigInt::mod_mul(&a_L[i], &x_bn, &order);
-                    let aR_minusx = BigInt::mod_mul(&yn_aR[i], &x_inv_fe.to_big_int(), &order);
-                    BigInt::mod_add(&aLx, &aR_minusx, &order)
+                    let aLx = BigInt::mod_mul(&a_L[i], &x_bn, order);
+                    let aR_minusx = BigInt::mod_mul(&yn_aR[i], &x_inv_fe.to_bigint(), order);
+                    BigInt::mod_add(&aLx, &aR_minusx, order)
                 })
                 .collect::<Vec<BigInt>>();
             //   a = &mut a_hat[..];
 
             let b_hat = (0..n)
                 .map(|i| {
-                    let bRx = BigInt::mod_mul(&b_R[i], &x_bn, &order);
-                    let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_big_int(), &order);
-                    BigInt::mod_add(&bRx, &bL_minusx, &order)
+                    let bRx = BigInt::mod_mul(&b_R[i], &x_bn, order);
+                    let bL_minusx = BigInt::mod_mul(&b_L[i], &x_inv_fe.to_bigint(), order);
+                    BigInt::mod_add(&bRx, &bL_minusx, order)
                 })
                 .collect::<Vec<BigInt>>();
             //    b = &mut b_hat[..];
 
-            let x2_dL = BigInt::mod_mul(&x_sq_bn, &d_L_fe.to_big_int(), &order);
-            let xinv2_dR = BigInt::mod_mul(&x_sq_inv_bn, &d_R_fe.to_big_int(), &order);
-            let x2_dL_xinv2_dR = BigInt::mod_add(&x2_dL, &xinv2_dR, &order);
-            let alpha_hat = BigInt::mod_add(&alpha, &x2_dL_xinv2_dR, &order);
+            let x2_dL = BigInt::mod_mul(&x_sq_bn, &d_L_fe.to_bigint(), order);
+            let xinv2_dR = BigInt::mod_mul(&x_sq_inv_bn, &d_R_fe.to_bigint(), order);
+            let x2_dL_xinv2_dR = BigInt::mod_add(&x2_dL, &xinv2_dR, order);
+            let alpha_hat = BigInt::mod_add(alpha, &x2_dL_xinv2_dR, order);
 
-            let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
-            let x_yinv_fe = ECScalar::from(&x_yinv);
+            let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], order);
+            let x_yinv_fe = Scalar::<Secp256k1>::from(&x_yinv);
             let G_hat = (0..n)
                 .map(|i| {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
                     let GRx_yinv = &G_R[i] * &x_yinv_fe;
                     GRx_yinv + GLx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<Point<Secp256k1>>>();
             //   G = &mut G_hat[..];
 
             let H_hat = (0..n)
@@ -204,92 +201,92 @@ impl WeightedInnerProdArg {
                     let HRx_inv = &H_R[i] * &x_inv_fe;
                     HLx + HRx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<Point<Secp256k1>>>();
             //    H = &mut H_hat[..];
 
             L_vec.push(L);
             R_vec.push(R);
-            return WeightedInnerProdArg::prove(
-                &G_hat, &H_hat, &g, &h, &P, &a_hat, &b_hat, &alpha_hat, &y, L_vec, R_vec,
-            );
+            WeightedInnerProdArg::prove(
+                &G_hat, &H_hat, g, h, P, &a_hat, &b_hat, &alpha_hat, y, L_vec, R_vec,
+            )
         } else {
-            let r: FE = ECScalar::new_random();
-            let r_bn: BigInt = r.to_big_int();
-            let s: FE = ECScalar::new_random();
-            let s_bn: BigInt = s.to_big_int();
-            let delta: FE = ECScalar::new_random();
-            let delta_bn: BigInt = delta.to_big_int();
-            let eta: FE = ECScalar::new_random();
-            let eta_bn: BigInt = eta.to_big_int();
+            let r = Scalar::<Secp256k1>::random();
+            let r_bn: BigInt = r.to_bigint();
+            let s = Scalar::<Secp256k1>::random();
+            let s_bn: BigInt = s.to_bigint();
+            let delta = Scalar::<Secp256k1>::random();
+            let delta_bn: BigInt = delta.to_bigint();
+            let eta = Scalar::<Secp256k1>::random();
+            let eta_bn: BigInt = eta.to_bigint();
 
             // compute A
             let Gr = &G[0] * &r;
             let Hs = &H[0] * &s;
-            let a_s = BigInt::mod_mul(&a[0], &s_bn, &order);
-            let a_sy = BigInt::mod_mul(&a_s, &y, &order);
-            let b_r = BigInt::mod_mul(&b[0], &r_bn, &order);
-            let b_ry = BigInt::mod_mul(&b_r, &y, &order);
-            let a_sy_b_ry = BigInt::mod_add(&a_sy, &b_ry, &order);
-            let g_a_sy_b_ry = g * &ECScalar::from(&a_sy_b_ry);
+            let a_s = BigInt::mod_mul(&a[0], &s_bn, order);
+            let a_sy = BigInt::mod_mul(&a_s, y, order);
+            let b_r = BigInt::mod_mul(&b[0], &r_bn, order);
+            let b_ry = BigInt::mod_mul(&b_r, y, order);
+            let a_sy_b_ry = BigInt::mod_add(&a_sy, &b_ry, order);
+            let g_a_sy_b_ry = g * &Scalar::<Secp256k1>::from(&a_sy_b_ry);
             let h_delta = h * &delta;
             let A = Gr + Hs + g_a_sy_b_ry + h_delta;
 
             // compute B
-            let r_s = BigInt::mod_mul(&r_bn, &s_bn, &order);
-            let r_sy = BigInt::mod_mul(&y, &r_s, &order);
-            let g_r_sy = g * &ECScalar::from(&r_sy);
+            let r_s = BigInt::mod_mul(&r_bn, &s_bn, order);
+            let r_sy = BigInt::mod_mul(y, &r_s, order);
+            let g_r_sy = g * &Scalar::<Secp256k1>::from(&r_sy);
             let h_eta = h * &eta;
             let B = g_r_sy + h_eta;
 
             // compute challenge e
             // let lg_n = L_vec.len();
-            let e = HSha256::create_hash_from_ge(&[&A, &B, &g, &h]);
-            let e_bn = e.to_big_int();
-            let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
+            let e: Scalar<Secp256k1> = Sha256::new().chain_points([&A, &B, g, h]).result_scalar();
+            let e_bn = e.to_bigint();
+            let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, order);
 
             // compute r_prime, s_prime, delta_prime
-            let ax = BigInt::mod_mul(&a[0], &e_bn, &order);
-            let bx = BigInt::mod_mul(&b[0], &e_bn, &order);
-            let r_prime = BigInt::mod_add(&r_bn, &ax, &order);
-            let s_prime = BigInt::mod_add(&s_bn, &bx, &order);
+            let ax = BigInt::mod_mul(&a[0], &e_bn, order);
+            let bx = BigInt::mod_mul(&b[0], &e_bn, order);
+            let r_prime = BigInt::mod_add(&r_bn, &ax, order);
+            let s_prime = BigInt::mod_add(&s_bn, &bx, order);
 
-            let deltax = BigInt::mod_mul(&delta_bn, &e_bn, &order);
-            let alpha_x2 = BigInt::mod_mul(&alpha, &e_sq_bn, &order);
-            let deltax_alpha_x2 = BigInt::mod_add(&deltax, &alpha_x2, &order);
-            let delta_prime = BigInt::mod_add(&eta_bn, &deltax_alpha_x2, &order);
+            let deltax = BigInt::mod_mul(&delta_bn, &e_bn, order);
+            let alpha_x2 = BigInt::mod_mul(alpha, &e_sq_bn, order);
+            let deltax_alpha_x2 = BigInt::mod_add(&deltax, &alpha_x2, order);
+            let delta_prime = BigInt::mod_add(&eta_bn, &deltax_alpha_x2, order);
 
-            return WeightedInnerProdArg {
+            WeightedInnerProdArg {
                 L: L_vec,
                 R: R_vec,
                 a_tag: A,
                 b_tag: B,
-                r_prime: r_prime,
-                s_prime: s_prime,
-                delta_prime: delta_prime,
-            };
+                r_prime,
+                s_prime,
+                delta_prime,
+            }
         }
     }
 
     pub fn verify(
         &self,
-        g_vec: &[GE],
-        hi_tag: &[GE],
-        g: &GE,
-        h: &GE,
-        P: &GE,
+        g_vec: &[Point<Secp256k1>],
+        hi_tag: &[Point<Secp256k1>],
+        g: &Point<Secp256k1>,
+        h: &Point<Secp256k1>,
+        P: &Point<Secp256k1>,
         y: &BigInt,
     ) -> Result<(), Errors> {
-        let G = &g_vec[..];
-        let H = &hi_tag[..];
+        let G = g_vec;
+        let H = hi_tag;
         let n = G.len();
-        let order = FE::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let y_inv = BigInt::mod_inv(&y, &order).unwrap();
+        let y_inv = BigInt::mod_inv(y, order).unwrap();
         let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
             .take(n)
             .collect::<Vec<BigInt>>();
@@ -299,25 +296,26 @@ impl WeightedInnerProdArg {
             let (G_L, G_R) = G.split_at(n);
             let (H_L, H_R) = H.split_at(n);
 
-            let x = HSha256::create_hash_from_ge(&[&self.L[0], &self.R[0], &g, &h]);
-            let x_bn = x.to_big_int();
-            let order = FE::q();
-            let x_inv_fe = x.invert();
-            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            let x_sq_fe: FE = ECScalar::from(&x_sq_bn);
-            let x_inv_sq_fe: FE = ECScalar::from(&x_inv_sq_bn);
+            let x = Sha256::new()
+                .chain_points([&self.L[0], &self.R[0], g, h])
+                .result_scalar();
+            let x_bn = x.to_bigint();
+            let order = Scalar::<Secp256k1>::group_order();
+            let x_inv_fe = x.invert().unwrap();
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), order);
+            let x_sq_fe = Scalar::<Secp256k1>::from(&x_sq_bn);
+            let x_inv_sq_fe = Scalar::<Secp256k1>::from(&x_inv_sq_bn);
 
-            let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], &order);
-            let x_yinv_fe = ECScalar::from(&x_yinv);
+            let x_yinv = BigInt::mod_mul(&x_bn, &powers_yinv[n - 1], order);
+            let x_yinv_fe = Scalar::<Secp256k1>::from(&x_yinv);
             let G_hat = (0..n)
                 .map(|i| {
                     let GLx_inv = &G_L[i] * &x_inv_fe;
                     let GRx_yinv = &G_R[i] * &x_yinv_fe;
                     GRx_yinv + GLx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<Point<Secp256k1>>>();
             //   G = &mut G_hat[..];
 
             let H_hat = (0..n)
@@ -326,7 +324,7 @@ impl WeightedInnerProdArg {
                     let HRx_inv = &H_R[i] * &x_inv_fe;
                     HLx + HRx_inv
                 })
-                .collect::<Vec<GE>>();
+                .collect::<Vec<Point<Secp256k1>>>();
             //    H = &mut H_hat[..];
 
             let Lx_sq = &self.L[0] * &x_sq_fe;
@@ -342,30 +340,33 @@ impl WeightedInnerProdArg {
                 s_prime: self.s_prime.clone(),
                 delta_prime: self.delta_prime.clone(),
             };
-            return ip.verify(&G_hat, &H_hat, g, h, &P_tag, &y);
+            return ip.verify(&G_hat, &H_hat, g, h, &P_tag, y);
         }
 
         // compute challenge e
-        let e = HSha256::create_hash_from_ge(&[&self.a_tag, &self.b_tag, &g, &h]);
-        let e_bn = e.to_big_int();
-        let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
-        let e_sq_fe: FE = ECScalar::from(&e_sq_bn);
+
+        let e = Sha256::new()
+            .chain_points([&self.a_tag, &self.b_tag, g, h])
+            .result_scalar();
+        let e_bn = e.to_bigint();
+        let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, order);
+        let e_sq_fe = Scalar::<Secp256k1>::from(&e_sq_bn);
 
         // left hand side of verification
         // LHS = e^2*P + e*A + B
         let P_e2 = P * &e_sq_fe;
-        let Ae = self.a_tag * &e;
-        let left = P_e2 + Ae + self.b_tag;
+        let Ae = &self.a_tag * &e;
+        let left = P_e2 + Ae + &self.b_tag;
 
         // RHS = (er')*G + (es')*H + (r's'y)*g + (delta')*h
-        let er_prime = BigInt::mod_mul(&e_bn, &self.r_prime, &order);
-        let Ger_prime = &G[0] * &ECScalar::from(&er_prime);
-        let es_prime = BigInt::mod_mul(&e_bn, &self.s_prime, &order);
-        let Hes_prime = &H[0] * &ECScalar::from(&es_prime);
-        let rs_prime = BigInt::mod_mul(&self.s_prime, &self.r_prime, &order);
-        let yrs_prime = BigInt::mod_mul(&rs_prime, &y, &order);
-        let g_yrs_prime = g * &ECScalar::from(&yrs_prime);
-        let h_delta_prime = h * &ECScalar::from(&self.delta_prime);
+        let er_prime = BigInt::mod_mul(&e_bn, &self.r_prime, order);
+        let Ger_prime = &G[0] * &Scalar::<Secp256k1>::from(&er_prime);
+        let es_prime = BigInt::mod_mul(&e_bn, &self.s_prime, order);
+        let Hes_prime = &H[0] * &Scalar::<Secp256k1>::from(&es_prime);
+        let rs_prime = BigInt::mod_mul(&self.s_prime, &self.r_prime, order);
+        let yrs_prime = BigInt::mod_mul(&rs_prime, y, order);
+        let g_yrs_prime = g * &Scalar::<Secp256k1>::from(&yrs_prime);
+        let h_delta_prime = h * &Scalar::<Secp256k1>::from(&self.delta_prime);
         let right = Ger_prime + Hes_prime + g_yrs_prime + h_delta_prime;
 
         if left == right {
@@ -384,24 +385,24 @@ impl WeightedInnerProdArg {
     ///
     pub fn fast_verify(
         &self,
-        g_vec: &[GE],
-        hi_tag: &[GE],
-        g: &GE,
-        h: &GE,
-        P: &GE,
+        g_vec: &[Point<Secp256k1>],
+        hi_tag: &[Point<Secp256k1>],
+        g: &Point<Secp256k1>,
+        h: &Point<Secp256k1>,
+        P: &Point<Secp256k1>,
         y: &BigInt,
     ) -> Result<(), Errors> {
-        let G = &g_vec[..];
-        let H = &hi_tag[..];
+        let G = g_vec;
+        let H = hi_tag;
         let n = G.len();
-        let order = FE::q();
+        let order = Scalar::<Secp256k1>::group_order();
 
         // All of the input vectors must have the same length.
         assert_eq!(H.len(), n);
         assert!(n.is_power_of_two());
 
         // compute powers of y
-        let y_inv = BigInt::mod_inv(&y, &order).unwrap();
+        let y_inv = BigInt::mod_inv(y, order).unwrap();
         let powers_yinv = iterate(y_inv.clone(), |i| i.clone() * y_inv.clone())
             .take(n)
             .collect::<Vec<BigInt>>();
@@ -413,9 +414,11 @@ impl WeightedInnerProdArg {
         );
 
         // compute challenge e
-        let e = HSha256::create_hash_from_ge(&[&self.a_tag, &self.b_tag, &g, &h]);
-        let e_bn = e.to_big_int();
-        let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, &order);
+        let e: Scalar<Secp256k1> = Sha256::new()
+            .chain_points([&self.a_tag, &self.b_tag, g, h])
+            .result_scalar();
+        let e_bn = e.to_bigint();
+        let e_sq_bn = BigInt::mod_mul(&e_bn, &e_bn, order);
 
         let mut x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
         let mut minus_e_sq_x_sq_vec: Vec<BigInt> = Vec::with_capacity(lg_n);
@@ -423,33 +426,32 @@ impl WeightedInnerProdArg {
         let mut allinv = BigInt::one();
         let mut all = BigInt::one();
         for (Li, Ri) in self.L.iter().zip(self.R.iter()) {
-            let x = HSha256::create_hash_from_ge::<GE>(&[&Li, &Ri, &g, &h]);
-            let x_bn = x.to_big_int();
-            let x_inv_fe = x.invert();
-            let x_inv_bn = x_inv_fe.to_big_int();
-            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, &order);
-            let x_inv_sq_bn =
-                BigInt::mod_mul(&x_inv_fe.to_big_int(), &x_inv_fe.to_big_int(), &order);
-            let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, &order);
-            let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, &order);
+            let x: Scalar<Secp256k1> = Sha256::new().chain_points([Li, Ri, g, h]).result_scalar();
+            let x_bn = x.to_bigint();
+            let x_inv_fe = x.invert().unwrap();
+            let x_inv_bn = x_inv_fe.to_bigint();
+            let x_sq_bn = BigInt::mod_mul(&x_bn, &x_bn, order);
+            let x_inv_sq_bn = BigInt::mod_mul(&x_inv_fe.to_bigint(), &x_inv_fe.to_bigint(), order);
+            let e_sq_x_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_sq_bn, order);
+            let e_sq_x_inv_sq_bn = BigInt::mod_mul(&e_sq_bn, &x_inv_sq_bn, order);
 
             x_sq_vec.push(x_sq_bn.clone());
-            minus_e_sq_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &e_sq_x_sq_bn, &order));
+            minus_e_sq_x_sq_vec.push(BigInt::mod_sub(&BigInt::zero(), &e_sq_x_sq_bn, order));
             minus_e_sq_x_inv_sq_vec.push(BigInt::mod_sub(
                 &BigInt::zero(),
                 &e_sq_x_inv_sq_bn,
-                &order,
+                order,
             ));
-            allinv = allinv * x_inv_bn;
-            all = all * x_bn;
+            allinv *= x_inv_bn;
+            all *= x_bn;
         }
 
         let mut s: Vec<BigInt> = Vec::with_capacity(n);
         let mut sg: Vec<BigInt> = Vec::with_capacity(n);
         let mut sh: Vec<BigInt> = Vec::with_capacity(n);
         s.push(allinv.clone());
-        sg.push(allinv.clone());
-        sh.push(all.clone());
+        sg.push(allinv);
+        sh.push(all);
         for i in 1..n {
             let lg_i =
                 (std::mem::size_of_val(&n) * 8) - 1 - ((i as usize).leading_zeros() as usize);
@@ -458,8 +460,8 @@ impl WeightedInnerProdArg {
             // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
             let x_lg_i_sq = x_sq_vec[(lg_n - 1) - lg_i].clone();
             s.push(s[i - k].clone() * x_lg_i_sq);
-            let s_inv_i = BigInt::mod_inv(&s[i], &order).unwrap();
-            let si_yi = BigInt::mod_mul(&s[i], &powers_yinv[i - 1], &order);
+            let s_inv_i = BigInt::mod_inv(&s[i], order).unwrap();
+            let si_yi = BigInt::mod_mul(&s[i], &powers_yinv[i - 1], order);
 
             sg.push(si_yi);
             sh.push(s_inv_i);
@@ -468,18 +470,18 @@ impl WeightedInnerProdArg {
         // Scalar exponent of LHS
         let er_times_sg: Vec<BigInt> = (0..n)
             .map(|i| {
-                let e_sg_i = BigInt::mod_mul(&e_bn, &sg[i], &order);
-                BigInt::mod_mul(&self.r_prime, &e_sg_i, &order)
+                let e_sg_i = BigInt::mod_mul(&e_bn, &sg[i], order);
+                BigInt::mod_mul(&self.r_prime, &e_sg_i, order)
             })
             .collect();
         let es_times_sg: Vec<BigInt> = (0..n)
             .map(|i| {
-                let e_sh_i = BigInt::mod_mul(&e_bn, &sh[i], &order);
-                BigInt::mod_mul(&self.s_prime, &e_sh_i, &order)
+                let e_sh_i = BigInt::mod_mul(&e_bn, &sh[i], order);
+                BigInt::mod_mul(&self.s_prime, &e_sh_i, order)
             })
             .collect();
-        let r_times_s = BigInt::mod_mul(&self.r_prime, &self.s_prime, &order);
-        let r_times_s_y = BigInt::mod_mul(&r_times_s, &y, &order);
+        let r_times_s = BigInt::mod_mul(&self.r_prime, &self.s_prime, order);
+        let r_times_s_y = BigInt::mod_mul(&r_times_s, y, order);
 
         let mut scalars: Vec<BigInt> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
         scalars.extend_from_slice(&er_times_sg);
@@ -488,22 +490,22 @@ impl WeightedInnerProdArg {
         scalars.extend_from_slice(&minus_e_sq_x_inv_sq_vec);
         scalars.push(r_times_s_y);
 
-        let mut points: Vec<GE> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
+        let mut points: Vec<Point<Secp256k1>> = Vec::with_capacity(2 * n + 2 * lg_n + 1);
         points.extend_from_slice(g_vec);
         points.extend_from_slice(hi_tag);
         points.extend_from_slice(&self.L);
         points.extend_from_slice(&self.R);
-        points.push(*g);
+        points.push(g.clone());
 
-        let h_delta_prime = h * &ECScalar::from(&self.delta_prime);
+        let h_delta_prime = h * &Scalar::<Secp256k1>::from(&self.delta_prime);
         let tot_len = points.len();
         let lhs = (0..tot_len)
-            .map(|i| points[i] * &ECScalar::from(&scalars[i]))
-            .fold(h_delta_prime, |acc, x| acc + x as GE);
+            .map(|i| &points[i] * &Scalar::<Secp256k1>::from(&scalars[i]))
+            .fold(h_delta_prime, |acc, x| acc + x as Point<Secp256k1>);
 
-        let Ae = self.a_tag * &ECScalar::from(&e_bn);
-        let Pe_sq = P * &ECScalar::from(&e_sq_bn);
-        let rhs = Pe_sq + Ae + self.b_tag;
+        let Ae = &self.a_tag * &Scalar::<Secp256k1>::from(&e_bn);
+        let Pe_sq = P * &Scalar::<Secp256k1>::from(&e_sq_bn);
+        let rhs = Pe_sq + Ae + &self.b_tag;
 
         if lhs == rhs {
             Ok(())
@@ -519,35 +521,30 @@ fn weighted_inner_product(a: &[BigInt], b: &[BigInt], y: BigInt) -> BigInt {
         b.len(),
         "weighted_inner_product(a,b): lengths of vectors do not match"
     );
-    let order = FE::q();
+    let order = Scalar::<Secp256k1>::group_order();
     let y_powers = iterate(y.clone(), |i| i.clone() * y.clone())
         .take(a.len())
         .collect::<Vec<BigInt>>();
     let n = a.len();
-    let out = (0..n)
-        .map(|i| {
-            let aibi = BigInt::mod_mul(&a[i], &b[i], &order);
-            BigInt::mod_mul(&aibi, &y_powers[i], &order)
-        })
-        .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, &order));
 
-    return out;
+    (0..n)
+        .map(|i| {
+            let aibi = BigInt::mod_mul(&a[i], &b[i], order);
+            BigInt::mod_mul(&aibi, &y_powers[i], order)
+        })
+        .fold(BigInt::zero(), |acc, x| BigInt::mod_add(&acc, &x, order))
 }
 
 #[cfg(test)]
 mod tests {
     use curv::arithmetic::traits::*;
-    use curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
-    use curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
-    use curv::cryptographic_primitives::hashing::traits::*;
-    use curv::elliptic::curves::traits::*;
+    use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+    use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
     use curv::BigInt;
+    use sha2::{Sha256, Sha512};
 
-    type GE = curv::elliptic::curves::secp256_k1::GE;
-    type FE = curv::elliptic::curves::secp256_k1::FE;
-
+    use curv::elliptic::curves::secp256_k1::hash_to_curve::generate_random_point;
     use itertools::iterate;
-    use proofs::range_proof::generate_random_point;
     use proofs::weighted_inner_product::weighted_inner_product;
     use proofs::weighted_inner_product::WeightedInnerProdArg;
 
@@ -558,80 +555,86 @@ mod tests {
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                let hash_i = Sha512::new().chain_bigint(&kzen_label_i).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                let hash_j = Sha512::new().chain_bigint(&kzen_label_j).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<Point<Secp256k1>>>();
 
         let label = BigInt::from(2);
-        let hash = HSha512::create_hash(&[&label]);
+        let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let g = generate_random_point(&Converter::to_bytes(&hash));
         let label = BigInt::from(3);
-        let hash = HSha512::create_hash(&[&label]);
+        let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let h = generate_random_point(&Converter::to_bytes(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
-                rand.to_big_int()
+                let rand = Scalar::<Secp256k1>::random();
+                rand.to_bigint()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
-                rand.to_big_int()
+                let rand = Scalar::<Secp256k1>::random();
+                rand.to_bigint()
             })
             .collect();
 
-        let y_scalar: BigInt =
-            HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        let y_scalar: BigInt = Sha256::new()
+            .chain(b"Seed string decided by P,V!")
+            .result_bigint();
+        //HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
-        let alpha_fe: FE = ECScalar::new_random();
-        let alpha = alpha_fe.to_big_int();
+        let alpha_fe = Scalar::<Secp256k1>::random();
+        let alpha = alpha_fe.to_bigint();
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y = Scalar::<Secp256k1>::random();
+        let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
-                yi_fe.invert()
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
+                yi_fe.invert().unwrap()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
-        let g_c: GE = &g * &c_fe;
-        let h_alpha: GE = &h * &alpha_fe;
+        let c_fe = Scalar::<Secp256k1>::from(&c);
+        let g_c: Point<Secp256k1> = &g * &c_fe;
+        let h_alpha: Point<Secp256k1> = &h * &alpha_fe;
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
-            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+            .fold(gc_halpha, |acc, x: Point<Secp256k1>| {
+                acc + x as Point<Secp256k1>
+            });
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: Point<Secp256k1>| acc + x as Point<Secp256k1>);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -649,80 +652,85 @@ mod tests {
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                let hash_i = Sha512::new().chain_bigint(&kzen_label_i).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                let hash_j = Sha512::new().chain_bigint(&kzen_label_j).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<Point<Secp256k1>>>();
 
         let label = BigInt::from(2);
-        let hash = HSha512::create_hash(&[&label]);
+        let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let g = generate_random_point(&Converter::to_bytes(&hash));
         let label = BigInt::from(3);
-        let hash = HSha512::create_hash(&[&label]);
+        let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let h = generate_random_point(&Converter::to_bytes(&hash));
 
         let a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
-                rand.to_big_int()
+                let rand = Scalar::<Secp256k1>::random();
+                rand.to_bigint()
             })
             .collect();
 
         let b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
-                rand.to_big_int()
+                let rand = Scalar::<Secp256k1>::random();
+                rand.to_bigint()
             })
             .collect();
 
-        let y_scalar: BigInt =
-            HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
+        let y_scalar: BigInt = Sha256::new()
+            .chain(b"Seed string decided by P,V!")
+            .result_bigint();
         let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
 
-        let alpha_fe: FE = ECScalar::new_random();
-        let alpha = alpha_fe.to_big_int();
+        let alpha_fe = Scalar::<Secp256k1>::random();
+        let alpha = alpha_fe.to_bigint();
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y = Scalar::<Secp256k1>::random();
+        let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
-                yi_fe.invert()
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
+                yi_fe.invert().unwrap()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
-        let g_c: GE = &g * &c_fe;
-        let h_alpha: GE = &h * &alpha_fe;
+        let c_fe = Scalar::<Secp256k1>::from(&c);
+        let g_c: Point<Secp256k1> = &g * &c_fe;
+        let h_alpha: Point<Secp256k1> = &h * &alpha_fe;
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..n)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
-            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+            .fold(gc_halpha, |acc, x: Point<Secp256k1>| {
+                acc + x as Point<Secp256k1>
+            });
         let P = (0..n)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: Point<Secp256k1>| acc + x as Point<Secp256k1>);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
@@ -740,72 +748,77 @@ mod tests {
         let g_vec = (0..n)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
-                let hash_i = HSha512::create_hash(&[&kzen_label_i]);
+                let hash_i = Sha512::new().chain_bigint(&kzen_label_i).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_i))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // can run in parallel to g_vec:
         let h_vec = (0..n)
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
-                let hash_j = HSha512::create_hash(&[&kzen_label_j]);
+                let hash_j = Sha512::new().chain_bigint(&kzen_label_j).result_bigint();
                 generate_random_point(&Converter::to_bytes(&hash_j))
             })
-            .collect::<Vec<GE>>();
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // generate g, h
         let label = BigInt::from(2);
-        let hash = HSha512::create_hash(&[&label]);
+        let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let g = generate_random_point(&Converter::to_bytes(&hash));
         let label = BigInt::from(3);
-        let hash = HSha512::create_hash(&[&label]);
+        let hash = Sha512::new().chain_bigint(&label).result_bigint();
         let h = generate_random_point(&Converter::to_bytes(&hash));
 
-        let y_scalar: BigInt =
-            HSha256::create_hash_from_slice("Seed string decided by P,V!".as_bytes());
-        let c = super::weighted_inner_product(&a, &b, y_scalar.clone());
+        let y_scalar: BigInt = Sha256::new()
+            .chain(b"Seed string decided by P,V!")
+            .result_bigint();
+        let c = super::weighted_inner_product(a, b, y_scalar.clone());
 
-        let alpha_fe: FE = ECScalar::new_random();
-        let alpha = alpha_fe.to_big_int();
+        let alpha_fe = Scalar::<Secp256k1>::random();
+        let alpha = alpha_fe.to_bigint();
 
-        let y: FE = ECScalar::new_random();
-        let order = FE::q();
+        let y = Scalar::<Secp256k1>::random();
+        let order = Scalar::<Secp256k1>::group_order();
         let yi = (0..n)
-            .map(|i| BigInt::mod_pow(&y.to_big_int(), &BigInt::from(i as u32), &order))
+            .map(|i| BigInt::mod_pow(&y.to_bigint(), &BigInt::from(i as u32), order))
             .collect::<Vec<BigInt>>();
 
         let yi_inv = (0..n)
             .map(|i| {
-                let yi_fe: FE = ECScalar::from(&yi[i]);
-                yi_fe.invert()
+                let yi_fe = Scalar::<Secp256k1>::from(&yi[i]);
+                yi_fe.invert().unwrap()
             })
-            .collect::<Vec<FE>>();
+            .collect::<Vec<Scalar<Secp256k1>>>();
 
-        let hi_tag = (0..n).map(|i| &h_vec[i] * &yi_inv[i]).collect::<Vec<GE>>();
+        let hi_tag = (0..n)
+            .map(|i| &h_vec[i] * &yi_inv[i])
+            .collect::<Vec<Point<Secp256k1>>>();
 
         // R = <a * G> + <b_L * H_R> + c * g + alpha*h
-        let c_fe: FE = ECScalar::from(&c);
-        let g_c: GE = &g * &c_fe;
-        let h_alpha: GE = &h * &alpha_fe;
+        let c_fe = Scalar::<Secp256k1>::from(&c);
+        let g_c: Point<Secp256k1> = &g * &c_fe;
+        let h_alpha: Point<Secp256k1> = &h * &alpha_fe;
         let gc_halpha = g_c + h_alpha;
         let a_G = (0..m)
             .map(|i| {
-                let ai: FE = ECScalar::from(&a[i]);
+                let ai = Scalar::<Secp256k1>::from(&a[i]);
                 &g_vec[i] * &ai
             })
-            .fold(gc_halpha, |acc, x: GE| acc + x as GE);
+            .fold(gc_halpha, |acc, x: Point<Secp256k1>| {
+                acc + x as Point<Secp256k1>
+            });
         let P = (0..m)
             .map(|i| {
-                let bi: FE = ECScalar::from(&b[i]);
+                let bi = Scalar::<Secp256k1>::from(&b[i]);
                 &hi_tag[i] * &bi
             })
-            .fold(a_G, |acc, x: GE| acc + x as GE);
+            .fold(a_G, |acc, x: Point<Secp256k1>| acc + x as Point<Secp256k1>);
 
         let L_vec = Vec::with_capacity(n);
         let R_vec = Vec::with_capacity(n);
         let ipp = WeightedInnerProdArg::prove(
-            &g_vec, &hi_tag, &g, &h, &P, &a, &b, &alpha, &y_scalar, L_vec, R_vec,
+            &g_vec, &hi_tag, &g, &h, &P, a, b, &alpha, &y_scalar, L_vec, R_vec,
         );
         let verifier = ipp.verify(&g_vec, &hi_tag, &g, &h, &P, &y_scalar);
         assert!(verifier.is_ok())
@@ -839,7 +852,7 @@ mod tests {
         ];
         assert_eq!(y_powers, expect_y_powers, "Scalar powers of y fails!");
 
-        let a_weighted_b = weighted_inner_product(&a, &b, y.clone());
+        let a_weighted_b = weighted_inner_product(&a, &b, y);
         assert_eq!(
             a_weighted_b,
             BigInt::from(46),
@@ -911,15 +924,15 @@ mod tests {
         let n: usize = 9;
         let mut a: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
-                rand.to_big_int()
+                let rand = Scalar::<Secp256k1>::random();
+                rand.to_bigint()
             })
             .collect();
 
         let mut b: Vec<_> = (0..n)
             .map(|_| {
-                let rand: FE = ECScalar::new_random();
-                rand.to_big_int()
+                let rand = Scalar::<Secp256k1>::random();
+                rand.to_bigint()
             })
             .collect();
 

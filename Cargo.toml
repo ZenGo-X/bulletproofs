@@ -1,25 +1,28 @@
 [package]
-name = "bulletproof"
-version = "1.1.6"
+name = "bulletproof-kzen"
+version = "1.2.0"
 authors = [
     "Omer Shlomovits <omer@kzencorp.com>",
     "Suyash Bagad <suyashnbagad1997@gmail.com>"
 ]
 
 [lib]
+name = "bulletproof"
 crate-type = ["lib"]
 
 [dependencies]
 itertools = "0.7.8"
 serde = "1.0"
 serde_derive = "1.0"
-curv = { package = "curv-kzen", version = "0.7", default-features = false }
+curv-kzen = { version = "0.9", default-features = false }
+sha2 = "0.9"
+generic-array = "0.14"
 
 [dev-dependencies]
 criterion = "0.2"
 
 [features]
-default = ["curv/rust-gmp-kzen"]
+default = ["curv-kzen/rust-gmp-kzen"]
 
 [[bench]]
 name = "range_proof"
