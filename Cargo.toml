@@ -5,6 +5,11 @@ authors = [
     "Omer Shlomovits <omer@kzencorp.com>",
     "Suyash Bagad <suyashnbagad1997@gmail.com>"
 ]
+license = "GPL-3.0"
+description = "Implementation of Bulletproofs and Bulletproofs+ aggregated range proofs with multi-exponent verification"
+repository = "https://github.com/ZenGo-X/bulletproofs"
+categories = ["cryptography", "algorithms"]
+keywords = ["cryptography", "crypto", "zero-knowledge", "bulletproofs"]
 
 [lib]
 name = "bulletproof"
