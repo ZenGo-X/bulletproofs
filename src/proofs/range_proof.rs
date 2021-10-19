@@ -815,7 +815,7 @@ mod tests {
     use curv::BigInt;
     use sha2::Sha512;
 
-    use proofs::range_proof::generate_random_point;
+    use curv::elliptic::curves::secp256_k1::hash_to_curve::generate_random_point;
     use proofs::range_proof::RangeProof;
 
     pub fn test_helper(seed: &BigInt, n: usize, m: usize) {

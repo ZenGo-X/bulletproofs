@@ -543,8 +543,8 @@ mod tests {
     use curv::BigInt;
     use sha2::{Sha256, Sha512};
 
+    use curv::elliptic::curves::secp256_k1::hash_to_curve::generate_random_point;
     use itertools::iterate;
-    use proofs::range_proof::generate_random_point;
     use proofs::weighted_inner_product::weighted_inner_product;
     use proofs::weighted_inner_product::WeightedInnerProdArg;
 

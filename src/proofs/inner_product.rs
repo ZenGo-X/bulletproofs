@@ -364,10 +364,10 @@ fn inner_product(a: &[BigInt], b: &[BigInt]) -> BigInt {
 mod tests {
     use curv::arithmetic::traits::*;
     use curv::cryptographic_primitives::hashing::{Digest, DigestExt};
+    use curv::elliptic::curves::secp256_k1::hash_to_curve::generate_random_point;
     use curv::elliptic::curves::{secp256_k1::Secp256k1, Point, Scalar};
     use curv::BigInt;
     use proofs::inner_product::InnerProductArg;
-    use proofs::range_proof::generate_random_point;
     use sha2::Sha512;
 
     fn test_helper(n: usize) {

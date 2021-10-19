@@ -13,7 +13,7 @@ crate-type = ["lib"]
 itertools = "0.7.8"
 serde = "1.0"
 serde_derive = "1.0"
-curv-kzen = { version = "0.8", default-features = false }
+curv-kzen = { version = "0.9", default-features = false }
 sha2 = "0.9"
 generic-array = "0.14"
 

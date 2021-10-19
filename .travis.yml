@@ -10,7 +10,7 @@ script:
   - cargo build --benches --verbose
   - cargo test --verbose
   - cargo fmt --all -- --check
-  - cargo clippy -- -D clippy::all 
+  - cargo clippy -- -D clippy::all
 
 deploy:
   provider: cargo
